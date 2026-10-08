@@ -1,0 +1,45 @@
+# Sistema y editores
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Configuración privada y firma
+.env
+.env.*
+!.env.example
+local.properties
+key.properties
+*.jks
+*.keystore
+*service-account*.json
+credentials.json
+secrets.json
+
+# Dependencias, caché y compilación
+node_modules/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+.gradle/
+build/
+dist/
+coverage/
+Pods/
+.symlinks/
+DerivedData/
+__pycache__/
+*.pyc
+*.log
+*.apk
+*.aab
+*.ipa
+
+# Se conservan manifiestos, lockfiles y los proyectos de plataforma.
