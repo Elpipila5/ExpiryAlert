@@ -1,3 +1,20 @@
+<<<<<<< HEAD
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+=======
 # Sistema y editores
 .DS_Store
 Thumbs.db
@@ -43,3 +60,4 @@ __pycache__/
 *.ipa
 
 # Se conservan manifiestos, lockfiles y los proyectos de plataforma.
+>>>>>>> 4113c46d2e1d4584fc8598bf8e9028b1bb128042
