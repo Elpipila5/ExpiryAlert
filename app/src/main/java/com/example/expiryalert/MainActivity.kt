@@ -7,6 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 
 import android.app.DatePickerDialog
 import android.os.Bundle
+import android.content.Intent
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -40,6 +41,22 @@ import java.util.concurrent.TimeUnit
 
 class MainActivity : ComponentActivity() {
 
+    private val avisoPendiente = mutableStateOf<Pair<String, String>?>(null)
+
+    private fun leerAviso(intent: Intent?) {
+        val uid = intent?.getStringExtra(NotificationHelper.EXTRA_USUARIO_ID)
+        val id = intent?.getStringExtra(NotificationHelper.EXTRA_PRODUCTO_ID)
+        if (!uid.isNullOrBlank() && !id.isNullOrBlank()) {
+            avisoPendiente.value = uid to id
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        leerAviso(intent)
+    }
+
     private val solicitarPermisoNotificaciones =
         registerForActivityResult(
             ActivityResultContracts.RequestPermission()
@@ -69,10 +86,19 @@ class MainActivity : ComponentActivity() {
 
         NotificationHelper.crearCanalNotificaciones(this)
         pedirPermisoNotificaciones()
+        leerAviso(intent)
+        FirebaseAuth.getInstance().currentUser?.uid?.let { uid ->
+            ProgramadorAlertas.activar(this, uid)
+        }
 
         setContent {
             ExpiryAlertTheme {
-                ExpiryAlertApp()
+                ExpiryAlertApp(
+                    aviso = avisoPendiente.value,
+                    avisoAtendido = { avisoPendiente.value = null },
+                    activarAlertas = { uid -> ProgramadorAlertas.activar(this, uid) },
+                    cerrarAlertas = { uid -> ProgramadorAlertas.desactivar(this, uid) }
+                )
             }
         }
     }
@@ -96,7 +122,12 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun ExpiryAlertApp() {
+fun ExpiryAlertApp(
+    aviso: Pair<String, String>?,
+    avisoAtendido: () -> Unit,
+    activarAlertas: (String) -> Unit,
+    cerrarAlertas: (String) -> Unit
+) {
 
     var pantalla by remember {
         mutableStateOf(
@@ -110,6 +141,20 @@ fun ExpiryAlertApp() {
 
     var productoEditar by remember {
         mutableStateOf<Map<String, Any>?>(null)
+    }
+
+    LaunchedEffect(pantalla) {
+        if (pantalla == "principal") {
+            FirebaseAuth.getInstance().currentUser?.uid?.let(activarAlertas)
+        }
+    }
+
+    aviso?.let { (uid, id) ->
+        if (FirebaseAuth.getInstance().currentUser?.uid == uid) {
+            DialogoConfirmacionCaducidad(uid, id, avisoAtendido)
+        } else {
+            LaunchedEffect(uid, id) { avisoAtendido() }
+        }
     }
 
     Surface(
@@ -161,6 +206,7 @@ fun ExpiryAlertApp() {
                     pantalla = "editarProducto"
                 },
                 cerrarSesion = {
+                    FirebaseAuth.getInstance().currentUser?.uid?.let(cerrarAlertas)
                     FirebaseAuth.getInstance().signOut()
                     pantalla = "inicio"
                 }
@@ -778,7 +824,7 @@ fun PantallaPrincipal(
 
                             val datos = documento.data?.toMutableMap()
 
-                            if (datos != null) {
+                            if (datos != null && datos["activo"] != false) {
                                 datos["id"] = documento.id
                             }
 
@@ -844,6 +890,9 @@ fun PantallaPrincipal(
                                 .delete()
                                 .addOnSuccessListener {
 
+                                    FirebaseAuth.getInstance().currentUser?.uid?.let { uid ->
+                                        NotificationHelper.cancelarAlerta(context, uid, id)
+                                    }
                                     Toast.makeText(
                                         context,
                                         "Producto eliminado",
@@ -1037,6 +1086,20 @@ fun PantallaPrincipal(
 
         Spacer(modifier = Modifier.height(20.dp))
 
+        OutlinedButton(
+            onClick = {
+                usuario?.uid?.let { uid ->
+                    ProgramadorAlertas.revisarAhora(context, uid)
+                    Toast.makeText(context, "Revisión solicitada. Las alertas pueden tardar unos momentos.", Toast.LENGTH_LONG).show()
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("🔔 Revisar caducidades ahora")
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
         Button(
             onClick = agregarProducto,
             modifier = Modifier
@@ -1209,68 +1272,12 @@ fun TarjetaProducto(
 // CALCULAR ESTADO
 // ----------------------------------------------------
 
-fun calcularEstadoCaducidad(
-    fechaCaducidad: String
-): String {
-
-    return try {
-
-        val formato =
-            SimpleDateFormat(
-                "dd/MM/yyyy",
-                Locale.getDefault()
-            )
-
-        formato.isLenient = false
-
-        val fechaProducto =
-            formato.parse(fechaCaducidad)
-                ?: return "Seguro"
-
-        val hoy =
-            Calendar.getInstance().apply {
-
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }
-
-        val fechaFinal =
-            Calendar.getInstance().apply {
-
-                time = fechaProducto
-
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }
-
-        val diferencia =
-            fechaFinal.timeInMillis -
-                    hoy.timeInMillis
-
-        val diasRestantes =
-            TimeUnit.MILLISECONDS.toDays(
-                diferencia
-            )
-
-        when {
-
-            diasRestantes < 0 ->
-                "Vencido"
-
-            diasRestantes <= 7 ->
-                "Próximo a caducar"
-
-            else ->
-                "Seguro"
-        }
-
-    } catch (e: Exception) {
-
-        "Seguro"
+fun calcularEstadoCaducidad(fechaCaducidad: String): String {
+    val dias = FechasCaducidad.diasRestantes(fechaCaducidad) ?: return "Fecha inválida"
+    return when {
+        dias < 0 -> "Vencido"
+        dias <= 7 -> "Próximo a caducar"
+        else -> "Seguro"
     }
 }
 
@@ -2006,4 +2013,103 @@ fun PantallaEditarProducto(
             )
         }
     }
+}
+
+
+// ----------------------------------------------------
+// CONFIRMACIÓN DESDE UNA NOTIFICACIÓN
+// ----------------------------------------------------
+@Composable
+fun DialogoConfirmacionCaducidad(
+    uid: String,
+    productoId: String,
+    cerrar: () -> Unit
+) {
+    val context = LocalContext.current
+    val db = remember { FirebaseFirestore.getInstance() }
+    var producto by remember(uid, productoId) { mutableStateOf<Map<String, Any>?>(null) }
+    var error by remember(uid, productoId) { mutableStateOf<String?>(null) }
+    var cargando by remember(uid, productoId) { mutableStateOf(true) }
+    var guardando by remember(uid, productoId) { mutableStateOf(false) }
+
+    LaunchedEffect(uid, productoId) {
+        db.collection("productos").document(productoId).get()
+            .addOnSuccessListener { doc ->
+                val datos = doc.data
+                if (FirebaseAuth.getInstance().currentUser?.uid != uid ||
+                    !doc.exists() ||
+                    datos?.get("usuarioId") != uid ||
+                    datos["activo"] == false
+                ) {
+                    error = "El producto ya no está disponible en tu inventario."
+                } else {
+                    producto = datos
+                }
+                cargando = false
+            }
+            .addOnFailureListener {
+                error = "No fue posible consultar el producto: ${it.localizedMessage}"
+                cargando = false
+            }
+    }
+
+    fun confirmar(conservaProducto: Boolean) {
+        if (guardando || FirebaseAuth.getInstance().currentUser?.uid != uid) return
+        guardando = true
+        val cambios = mutableMapOf<String, Any>(
+            "ultimaConfirmacion" to Timestamp.now()
+        )
+        if (!conservaProducto) {
+            cambios["activo"] = false
+            cambios["cantidad"] = 0
+        }
+        db.collection("productos").document(productoId).update(cambios)
+            .addOnSuccessListener {
+                NotificationHelper.cancelarAlerta(context, uid, productoId)
+                Toast.makeText(
+                    context,
+                    if (conservaProducto) "Producto confirmado" else "Producto archivado",
+                    Toast.LENGTH_SHORT
+                ).show()
+                cerrar()
+            }
+            .addOnFailureListener {
+                guardando = false
+                error = "Error al guardar: ${it.localizedMessage}"
+            }
+    }
+
+    AlertDialog(
+        onDismissRequest = { if (!guardando) cerrar() },
+        title = { Text("¿Todavía tienes este producto?") },
+        text = {
+            Column {
+                if (cargando) {
+                    CircularProgressIndicator()
+                } else if (producto != null) {
+                    Text("${producto?.get("nombre") ?: "Producto"} — caduca: ${producto?.get("fechaCaducidad") ?: "Sin fecha"}")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Puedes conservarlo o archivarlo si ya lo consumiste o desechaste.")
+                }
+                if (error != null) Text(error ?: "", color = Color(0xFFD32F2F))
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = !cargando && !guardando && producto != null,
+                onClick = { confirmar(true) }
+            ) { Text("Sí, todavía lo tengo") }
+        },
+        dismissButton = {
+            Column {
+                TextButton(
+                    enabled = !cargando && !guardando && producto != null,
+                    onClick = { confirmar(false) }
+                ) { Text("Ya no lo tengo") }
+                TextButton(enabled = !guardando, onClick = cerrar) {
+                    Text("Más tarde")
+                }
+            }
+        }
+    )
 }
