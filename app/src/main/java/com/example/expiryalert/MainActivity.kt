@@ -803,6 +803,9 @@ fun PantallaPrincipal(
         mutableStateOf<Map<String, Any>?>(null)
     }
 
+    var revisandoCaducidades by remember { mutableStateOf(false) }
+    var resultadoRevision by remember { mutableStateOf<String?>(null) }
+
     DisposableEffect(usuario?.uid) {
 
         if (usuario == null) {
@@ -1095,13 +1098,29 @@ fun PantallaPrincipal(
         OutlinedButton(
             onClick = {
                 usuario?.uid?.let { uid ->
-                    ProgramadorAlertas.revisarAhora(context, uid)
-                    Toast.makeText(context, "Revisión solicitada. Las alertas pueden tardar unos momentos.", Toast.LENGTH_LONG).show()
+                    revisandoCaducidades = true
+                    resultadoRevision = null
+                    RevisionManualCaducidad.revisar(context, uid) { mensaje ->
+                        revisandoCaducidades = false
+                        resultadoRevision = mensaje
+                    }
                 }
             },
+            enabled = !revisandoCaducidades,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("🔔 Revisar caducidades ahora")
+            Text(if (revisandoCaducidades) "Revisando productos…" else "🔔 Revisar caducidades ahora")
+        }
+        if (revisandoCaducidades) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        }
+        resultadoRevision?.let { resultado ->
+            Text(
+                text = resultado,
+                color = Color.DarkGray,
+                fontSize = 14.sp,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -1635,9 +1654,10 @@ fun PantallaAgregarProducto(
                             .add(producto)
                             .addOnSuccessListener {
 
-                                // Integración Sprint 5: comprobar caducidad tras registrar.
+                                // Revisión inmediata con la app abierta; WorkManager sigue
+                                // realizando la revisión periódica en segundo plano.
                                 if (fechaCaducidad.isNotBlank()) {
-                                    ProgramadorAlertas.revisarAhora(context, usuario.uid)
+                                    RevisionManualCaducidad.revisar(context, usuario.uid)
                                 }
                                 cargando = false
 
@@ -2083,10 +2103,10 @@ fun PantallaEditarProducto(
                             .update(cambios)
                             .addOnSuccessListener {
 
-                                // Evitar avisos obsoletos y revisar la nueva fecha.
+                                // Cancelar avisos obsoletos y comprobar la nueva fecha.
                                 NotificationHelper.cancelarAlerta(context, usuario.uid, idProducto)
                                 if (fechaCaducidad.isNotBlank()) {
-                                    ProgramadorAlertas.revisarAhora(context, usuario.uid)
+                                    RevisionManualCaducidad.revisar(context, usuario.uid)
                                 }
                                 cargando = false
 
