@@ -1,6 +1,9 @@
 package com.example.expiryalert
 
 import android.net.Uri
+import android.content.ClipData
+import android.content.Context
+import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -19,6 +22,15 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import java.io.File
+
+/** Concede a la app de cámara permiso temporal para escribir la imagen. */
+private class TomarFotoConPermiso : ActivityResultContracts.TakePicture() {
+    override fun createIntent(context: Context, input: Uri): Intent =
+        super.createIntent(context, input).apply {
+            clipData = ClipData.newUri(context.contentResolver, "foto_producto", input)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+        }
+}
 
 /**
  * Captura desde la cámara del sistema o la galería, reconoce texto EN EL DISPOSITIVO,
@@ -69,7 +81,7 @@ fun CapturaOCRProducto(
     }
 
     val tomarFoto = rememberLauncherForActivityResult(
-        ActivityResultContracts.TakePicture()
+        TomarFotoConPermiso()
     ) { guardada ->
         val textoUri = uriCamara
         if (guardada && textoUri != null) {
