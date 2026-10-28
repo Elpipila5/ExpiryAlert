@@ -2,6 +2,42 @@
 
 **Estado:** código preparado, **pruebas reales por ejecutar y registrar**. La meta del cronograma es un flujo funcional de F01–F05 que demuestre al menos aproximadamente 50 % del alcance; no se declara cumplimiento por el mero hecho de tener código.
 
+## Resultado comunicado durante la revisión del 28/10/2026
+
+El probador confirmó **cuatro comprobaciones aprobadas** y **dos pendientes**, trabajando en la rama `feature/sprint5-integracion-seguridad-pruebas`. El modelo/version Android y evidencias visuales aún no se han informado. Estas observaciones **no reemplazan** la matriz completa de aceptación que aparece más abajo.
+
+| Comprobación efectivamente informada | Estado informado | Evidencia pendiente |
+| --- | --- | --- |
+| Compilación de aplicación e inicio de sesión | Aprobado | Captura del build y sesión |
+| Registrar y editar productos | Aprobado | Captura antes/después |
+| Escaneo de códigos y OCR | Aprobado | Captura del reconocimiento |
+| Guardar un producto próximo y solicitar revisión | Pendiente | Evidenciar notificación para nuevo producto |
+| Responder/archivar desde la notificación | Pendiente | Evidenciar diálogo y cambio de documento |
+| Cierre de sesión oculta notificaciones privadas | Aprobado | Captura antes/después |
+
+### Guía específica para ejecutar las dos pruebas pendientes
+
+> **Importante:** `ProgramadorAlertas.revisarAhora()` solicita la tarea a WorkManager; no garantiza ejecutarla al instante. Un producto ya notificado hoy tampoco generará un segundo aviso el mismo día. Usar **productos nuevos** para cada intento.
+
+**Caso A — comprobar una alerta real del producto recién creado**
+
+1. Confirmar sesión iniciada, conectividad y notificaciones habilitadas en Android; revisar también el canal **Alertas de caducidad**.
+2. Crear un producto manual de prueba con nombre distintivo, cantidad mayor a 0 y caducidad mañana (ejemplo para 28/10/2026: **29/10/2026**). No dejar fecha vacía.
+3. Guardarlo y confirmar que aparece en el inventario. El código pide revisión por WorkManager cuando el guardado tiene éxito.
+4. Volver a pantalla principal y pulsar **🔔 Revisar caducidades ahora** como comprobación adicional.
+5. Dar oportunidad al sistema de ejecutar la tarea. Si aparece **Alerta de caducidad**, registrar captura y aprobar el caso; no exigir que el aviso sea inmediato.
+
+**Caso B — verificar las dos respuestas (usar dos productos distintos)**
+
+1. Para un producto de prueba nuevo, tocar la **notificación** (no esperar botones en el panel del teléfono). ExpiryAlert debe abrir un cuadro **¿Todavía tienes este producto?**.
+2. Elegir **Sí, todavía lo tengo**. El documento debe mantener `activo` y escribir `ultimaConfirmacion` en Firestore; el producto sigue visible.
+3. Con otro producto nuevo y su propia notificación, elegir **Ya no lo tengo**. El documento queda con `activo=false`, `cantidad=0`, se oculta del inventario y se cancela su notificación.
+4. Capturar panel de notificaciones, diálogo y cambios de inventario (sin exponer UID/correo). No repetir con el mismo producto: la deduplicación diaria puede impedir nuevas alertas.
+
+**Si la notificación no aparece:** comprobar que fecha no está en blanco, que el producto pertenece a la cuenta actual, que no está archivado ni con cantidad cero; verificar el canal y permiso de notificaciones. En Logcat filtrar por `ExpiryAlertCaducidad`, `WorkManager` y `PERMISSION_DENIED`. Si el trabajo aparece en cola o con restricción de red, no confundir demora de WorkManager con error de caducidad. Capturar el error completo.
+
+**Si se abre la app pero no el diálogo:** registrar si estaba abierta o cerrada, la versión Android, si hubo cambio de usuario y los mensajes de Logcat. No marcar S5-08 ni S5-09 aprobados hasta observar la escritura real en Firestore y el cambio en inventario.
+
 ## Orden de demostración sugerido (flujo extremo a extremo)
 
 1. Abrir ExpiryAlert e iniciar sesión con una **cuenta de prueba A**. Mostrar la lista de productos vinculada al usuario.
