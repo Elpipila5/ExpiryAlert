@@ -22,6 +22,23 @@ Las reglas protegen la colección raíz `productos` y aplican:
 5. Tras validar, copiar/combinar las reglas del archivo, pulsar **Publish**, esperar su propagación y repetir las pruebas desde un teléfono con dos cuentas.
 6. Ante errores `PERMISSION_DENIED`, revisar campos y reglas antes de revertir. No cambiar temporalmente a `allow read, write: if true`.
 
+## Prueba mínima de seguridad en Firebase Console
+
+Antes de publicar, hay que validar **tanto que el propietario pueda usar la app como que otro usuario no pueda acceder**. Las pruebas en la interfaz no son suficientes, porque el filtro `whereEqualTo("usuarioId", usuario.uid)` oculta datos aunque las reglas del servidor sean demasiado amplias.
+
+1. En [Firebase Console](https://console.firebase.google.com/) entra en el **proyecto que utiliza ExpiryAlert** → **Firestore Database → Rules (Reglas)**.
+2. Copia y guarda las reglas actuales antes de cualquier modificación. Compara con [`firestore.rules`](../firestore.rules). Si existen otras colecciones o aplicaciones, se deben combinar las reglas, nunca reemplazarlas a ciegas.
+3. Pega o integra las reglas propuestas en el **editor sin pulsar Publish todavía**. Abre **Rules Playground / Zona de pruebas de reglas** (el simulador evalúa las reglas del editor y no altera el servidor).
+4. Para un documento **real de prueba** en `productos`, con `usuarioId` de la cuenta de prueba A, selecciona el tipo **get/read** y la ruta `/productos/ID_DEL_DOCUMENTO_DE_PRUEBA`.
+5. Simula autenticación con el UID de A. **Esperado: permitido**. Repite la misma lectura con UID de una cuenta de prueba B y sin autenticación. **Esperado: denegado**.
+6. Simula en un entorno de prueba una creación con `usuarioId=A` autenticado como A, `nombre`, `categoria`, `cantidad` positiva y `fechaCaducidad`. **Esperado: permitido**; cambia solo la identidad autenticada a B manteniendo `usuarioId=A`. **Esperado: denegado**.
+7. Comprueba también una actualización de `activo=false`, `cantidad=0`, `ultimaConfirmacion` para el documento de A (propietario A autorizado; B denegado).
+8. **Publica únicamente** si los casos previstos dan el resultado esperado, el esquema es compatible con los productos existentes y el equipo tiene una copia de las reglas actuales. Después comprueba otra vez registro, edición, borrado y confirmación de alerta en el dispositivo.
+
+**Advertencias:** el simulador no significa que las reglas ya estén publicadas; no contiene automáticamente todos los documentos, permisos y flujos reales. No es recomendable utilizar `allow read, write: if true` como solución a `PERMISSION_DENIED`. Si la app deja de poder guardar tras publicar, revisar las diferencias entre el esquema guardado y el esquema validado antes de implementar otras funcionalidades.
+
+**Estado al 28/10/2026:** las reglas siguen preparadas en GitHub; en esta conversación no se ha confirmado su publicación ni los resultados del simulador.
+
 ## Casos de seguridad
 
 | Prueba | Resultado esperado |
