@@ -105,4 +105,14 @@ object NotificationHelper {
     fun cancelarAlerta(context: Context, uid: String, productoId: String) {
         NotificationManagerCompat.from(context).cancel("$uid/$productoId".hashCode())
     }
+
+    /** Oculta notificaciones privadas de la cuenta al cerrar sesión. */
+    fun cancelarAlertasDeUsuario(context: Context, uid: String) {
+        val preferencias = context.getSharedPreferences("avisos_caducidad", Context.MODE_PRIVATE)
+        val manager = NotificationManagerCompat.from(context)
+        preferencias.all.keys
+            .filter { it.startsWith("$uid/") }
+            .forEach { clave -> manager.cancel(clave.hashCode()) }
+        // Se conserva la fecha del último aviso para no repetirlo al iniciar sesión.
+    }
 }

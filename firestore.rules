@@ -1,0 +1,80 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function autenticado() {
+      return request.auth != null;
+    }
+
+    function propietario(data) {
+      return autenticado() && data.usuarioId == request.auth.uid;
+    }
+
+    // Esquema actual de ExpiryAlert (Sprint 5).
+    // Actualizar esta lista en sprints siguientes cuando se incorporen
+    // consumos, lista de compras o campos nuevos.
+    function productoValido(data) {
+      return data.keys().hasAll([
+          'usuarioId', 'nombre', 'categoria', 'cantidad', 'fechaCaducidad'
+        ])
+        && data.keys().hasOnly([
+          'usuarioId', 'nombre', 'categoria', 'cantidad', 'fechaCaducidad',
+          'cantidadInicial', 'unidad', 'marca', 'codigoBarras',
+          'caducidadPendiente', 'correoUsuario', 'fechaCreacion',
+          'ultimaConfirmacion', 'activo'
+        ])
+        && data.usuarioId is string
+        && data.nombre is string
+        && data.nombre.size() > 0
+        && data.nombre.size() <= 150
+        && data.categoria is string
+        && data.categoria.size() <= 100
+        && data.cantidad is number
+        && data.cantidad >= 0
+        && data.cantidad <= 1000000
+        && data.fechaCaducidad is string
+        && (
+          data.fechaCaducidad == '' ||
+          data.fechaCaducidad.matches('^[0-9]{2}/[0-9]{2}/[0-9]{4}$')
+        )
+        && data.get('unidad', 'pzas') is string
+        && data.get('unidad', 'pzas').size() <= 30
+        && data.get('cantidadInicial', 1) is number
+        && data.get('cantidadInicial', 1) > 0
+        && data.get('marca', '') is string
+        && data.get('marca', '').size() <= 150
+        && data.get('codigoBarras', '') is string
+        && data.get('codigoBarras', '').size() <= 32
+        && data.get('caducidadPendiente', false) is bool
+        && data.get('correoUsuario', '') is string
+        && data.get('fechaCreacion', request.time) is timestamp
+        && data.get('ultimaConfirmacion', request.time) is timestamp
+        && data.get('activo', true) is bool;
+    }
+
+    match /productos/{productoId} {
+      // Consulta/listado solo de productos propios. Los clientes deben
+      // consultar con whereEqualTo("usuarioId", auth.uid).
+      allow get, list: if propietario(resource.data);
+
+      // Un producto nuevo debe pertenecer a la cuenta actual y tener
+      // cantidad positiva. Se permite fecha vacía (caducidad pendiente).
+      allow create: if propietario(request.resource.data)
+        && productoValido(request.resource.data)
+        && request.resource.data.cantidad > 0;
+
+      // No permitir transferir productos ni alterar la fecha de creación.
+      // Se permite cantidad 0 para archivar un producto consumido.
+      allow update: if propietario(resource.data)
+        && propietario(request.resource.data)
+        && productoValido(request.resource.data)
+        && !request.resource.data.diff(resource.data)
+          .affectedKeys().hasAny(['usuarioId', 'fechaCreacion']);
+
+      allow delete: if propietario(resource.data);
+    }
+
+    // Todo lo no declarado queda denegado por defecto.
+  }
+}

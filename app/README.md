@@ -1,15 +1,21 @@
-# Proyecto móvil
+# Aplicación Android — ExpiryAlert
 
-Aquí se incorpora la aplicación que el equipo ya empezó. Conserva su estructura real; por ejemplo, si es Flutter, `pubspec.yaml`, `lib/` y las plataformas pertenecen a esta carpeta. Si usa otra tecnología, conserva sus archivos originales de proyecto.
+Código real del proyecto móvil, escrito en **Kotlin**, con interfaz **Jetpack Compose**.
 
-## Primera integración
+## Archivos principales
 
-1. Crear una rama `feature/base-app` desde `main`.
-2. Copiar el proyecto completo a esta carpeta, sin cachés, dependencias descargadas o builds.
-3. Mantener manifiestos, archivos de bloqueo de dependencias y configuración pública necesaria.
-4. Reemplazar valores privados por una configuración de ejemplo y documentar cómo suministrarlos localmente.
-5. Actualizar [`docs/instalacion.md`](../docs/instalacion.md) con versiones, comandos y requisitos reales.
-6. Registrar qué funcionalidades sí están implementadas, ejecutarlas y adjuntar evidencia.
-7. Abrir un pull request y pedir a otro integrante que reproduzca la ejecución.
+- `src/main/java/com/example/expiryalert/MainActivity.kt`: navegación, autenticación, alta y edición de productos, inventario, confirmación de avisos.
+- `NotificationHelper.kt`, `ProgramadorAlertas.kt` y `RevisionCaducidadWorker.kt`: notificaciones, WorkManager y consulta de caducidad.
+- `FechasCaducidad.kt`: cálculo de días y validaciones de fechas.
+- `CapturaOCRProducto.kt` y `ExtractorDatosOCR.kt`: fotografía y lectura de fecha/cantidad.
+- `EscanerCodigoProducto.kt` y `ConsultaProductoCodigo.kt`: lector EAN/UPC y búsqueda de producto en Open Food Facts.
+- `build.gradle.kts`: dependencias Firebase, Compose, ML Kit y WorkManager.
+- `src/test/`: pruebas unitarias; `src/androidTest/`: pruebas instrumentadas de referencia.
 
-La estructura de módulos en [`docs/arquitectura.md`](../docs/arquitectura.md) es una propuesta adaptable. No requiere rehacer el código existente.
+## Abrir, ejecutar y entregar
+
+Abre la **carpeta raíz del repositorio** en Android Studio, sincroniza Gradle y selecciona la rama de trabajo. El procedimiento detallado y los comandos están en [instalación](../docs/instalacion.md).
+
+La prueba integral del **Sprint 5** está en [docs/pruebas/sprint5-integracion.md](../docs/pruebas/sprint5-integracion.md). Las reglas de acceso a productos se encuentran en [firestore.rules](../firestore.rules) y necesitan validación/publicación explícita en Firebase.
+
+No incluir credenciales privadas de Firebase, llaves de servicio, tokens ni bases de datos personales en commits o evidencias.
