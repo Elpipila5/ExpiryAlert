@@ -60,6 +60,23 @@ No se afirma que WorkManager ejecute a una hora exacta: Android puede retrasar s
 
 **Si se abre la app pero no el diálogo:** registrar si estaba abierta o cerrada, la versión Android, si hubo cambio de usuario y los mensajes de Logcat. No marcar S5-08 ni S5-09 aprobados hasta observar la escritura real en Firestore y el cambio en inventario.
 
+### Corrección del inventario archivado y del ID de producto (28/10/2026)
+
+El usuario informó que al pulsar **«Ya no lo tengo»** los artículos seguían visibles y, al seleccionar **Eliminar**, aparecía **«No se encontró el ID del producto»**.
+
+**Causa verificada en `MainActivity.kt`:** la transformación `mapNotNull` seguía devolviendo `datos` aunque `activo == false`. Al mismo tiempo, añadía `id` solo a los activos. Por tanto, los productos archivados se mostraban **sin ID**. Se corrigió utilizando `InventarioProductos.productoVisible(documento.id, documento.data)`, que devuelve `null` para archivados y asigna el ID real a todos los productos visibles. Se incluyen pruebas unitarias en `InventarioProductosTest.kt`.
+
+**Validación en Android Studio (aún no ejecutada en dispositivo para esta corrección):**
+
+1. Hacer Git Pull en la rama `feature/sprint5-integracion-seguridad-pruebas`, Sync Gradle y Run; ejecutar `InventarioProductosTest`.
+2. Revisar si un artículo archivado antes de la corrección **ya no aparece en la lista**. Debe permanecer en Firestore con `activo=false` como historial (no se ha borrado de la base).
+3. Crear **dos productos nuevos** con fecha de mañana. En la notificación del primero pulsar **«Sí, todavía lo tengo»**; debe permanecer en la lista y registrar `ultimaConfirmacion`.
+4. En la notificación del segundo pulsar **«Ya no lo tengo»**; debe desaparecer de la lista, con `activo=false` y `cantidad=0` en Firestore.
+5. Crear un **tercer producto activo**, pulsar **Eliminar** y confirmar. Debe borrarse el documento de Firestore sin mostrar **«No se encontró el ID del producto»**.
+6. Verificar que los documentos de otro usuario no aparecen al cambiar de cuenta.
+
+**No marcar S5-09 aprobado hasta ejecutar esta prueba y observar el resultado real.** 
+
 ## Orden de demostración sugerido (flujo extremo a extremo)
 
 1. Abrir ExpiryAlert e iniciar sesión con una **cuenta de prueba A**. Mostrar la lista de productos vinculada al usuario.
