@@ -830,14 +830,9 @@ fun PantallaPrincipal(
                     if (snapshot != null) {
 
                         productos = snapshot.documents.mapNotNull { documento ->
-
-                            val datos = documento.data?.toMutableMap()
-
-                            if (datos != null && datos["activo"] != false) {
-                                datos["id"] = documento.id
-                            }
-
-                            datos
+                            // Solo productos activos y siempre con su ID real de Firestore.
+                            // Antes se devolvían también los archivados, pero sin ID.
+                            InventarioProductos.productoVisible(documento.id, documento.data)
                         }
 
                         cargando = false
