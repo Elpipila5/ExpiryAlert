@@ -1150,8 +1150,10 @@ fun TarjetaProducto(
     val categoria =
         producto["categoria"]?.toString() ?: "Sin categoría"
 
-    val cantidad =
-        producto["cantidad"]?.toString() ?: "0"
+    val cantidad = (producto["cantidad"] as? Number)?.let {
+        if (it.toDouble() % 1.0 == 0.0) it.toLong().toString() else it.toString()
+    } ?: producto["cantidad"]?.toString() ?: "0"
+    val unidadMostrada = producto["unidad"]?.toString() ?: "pzas"
 
     val fechaCaducidad =
         producto["fechaCaducidad"]?.toString() ?: ""
@@ -1209,7 +1211,7 @@ fun TarjetaProducto(
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = "Cantidad: $cantidad",
+                text = "Cantidad: $cantidad $unidadMostrada",
                 fontSize = 16.sp,
                 color = Color.Gray
             )
@@ -1294,6 +1296,7 @@ fun PantallaAgregarProducto(
     var nombre by remember { mutableStateOf("") }
     var categoria by remember { mutableStateOf("") }
     var cantidad by remember { mutableStateOf("") }
+    var unidad by remember { mutableStateOf("pzas") }
     var fechaCaducidad by remember { mutableStateOf("") }
     var cargando by remember { mutableStateOf(false) }
 
@@ -1366,6 +1369,15 @@ fun PantallaAgregarProducto(
             color = Color.Gray
         )
 
+        Spacer(modifier = Modifier.height(18.dp))
+
+        CapturaOCRProducto { fecha, cantidadDetectada, unidadDetectada ->
+            fechaCaducidad = fecha
+            cantidad = cantidadDetectada
+            unidad = unidadDetectada
+            Toast.makeText(context, "Datos revisados. Completa el nombre y guarda.", Toast.LENGTH_LONG).show()
+        }
+
         Spacer(modifier = Modifier.height(30.dp))
 
         OutlinedTextField(
@@ -1406,8 +1418,9 @@ fun PantallaAgregarProducto(
             value = cantidad,
             onValueChange = { nuevoValor ->
 
-                if (nuevoValor.all { it.isDigit() }) {
-                    cantidad = nuevoValor
+                val limpio = nuevoValor.replace(',', '.')
+                if (limpio.matches(Regex("""\d*(?:\.\d{0,3})?"""))) {
+                    cantidad = limpio
                 }
             },
             label = {
@@ -1419,8 +1432,18 @@ fun PantallaAgregarProducto(
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Number
+                keyboardType = KeyboardType.Decimal
             )
+        )
+
+        Spacer(modifier = Modifier.height(15.dp))
+
+        OutlinedTextField(
+            value = unidad,
+            onValueChange = { unidad = it },
+            label = { Text("Unidad (pzas, g, kg, ml, L)") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
         )
 
         Spacer(modifier = Modifier.height(15.dp))
@@ -1500,8 +1523,7 @@ fun PantallaAgregarProducto(
                         ).show()
                     }
 
-                    cantidad.toIntOrNull() == null ||
-                            cantidad.toInt() <= 0 -> {
+                    cantidad.toDoubleOrNull()?.let { it > 0.0 && it.isFinite() } != true -> {
 
                         Toast.makeText(
                             context,
@@ -1510,7 +1532,11 @@ fun PantallaAgregarProducto(
                         ).show()
                     }
 
-                    fechaCaducidad.isBlank() -> {
+                    unidad.isBlank() -> {
+                        Toast.makeText(context, "Escribe una unidad", Toast.LENGTH_SHORT).show()
+                    }
+
+                    fechaCaducidad.isBlank() || FechasCaducidad.diasRestantes(fechaCaducidad) == null -> {
 
                         Toast.makeText(
                             context,
@@ -1527,7 +1553,9 @@ fun PantallaAgregarProducto(
                             hashMapOf(
                                 "nombre" to nombre.trim(),
                                 "categoria" to categoria.trim(),
-                                "cantidad" to cantidad.toInt(),
+                                "cantidad" to cantidad.toDouble(),
+                                "cantidadInicial" to cantidad.toDouble(),
+                                "unidad" to unidad.trim(),
                                 "fechaCaducidad" to fechaCaducidad,
                                 "usuarioId" to usuario.uid,
                                 "correoUsuario" to (usuario.email ?: ""),
@@ -1638,6 +1666,10 @@ fun PantallaEditarProducto(
         mutableStateOf(
             producto["cantidad"]?.toString() ?: ""
         )
+    }
+
+    var unidad by remember(producto) {
+        mutableStateOf(producto["unidad"]?.toString() ?: "pzas")
     }
 
     var fechaCaducidad by remember(producto) {
@@ -1789,12 +1821,9 @@ fun PantallaEditarProducto(
             value = cantidad,
             onValueChange = { nuevoValor ->
 
-                if (
-                    nuevoValor.all {
-                        it.isDigit()
-                    }
-                ) {
-                    cantidad = nuevoValor
+                val limpio = nuevoValor.replace(',', '.')
+                if (limpio.matches(Regex("""\d*(?:\.\d{0,3})?"""))) {
+                    cantidad = limpio
                 }
             },
             label = {
@@ -1806,8 +1835,18 @@ fun PantallaEditarProducto(
             keyboardOptions =
                 KeyboardOptions(
                     keyboardType =
-                        KeyboardType.Number
+                        KeyboardType.Decimal
                 )
+        )
+
+        Spacer(modifier = Modifier.height(15.dp))
+
+        OutlinedTextField(
+            value = unidad,
+            onValueChange = { unidad = it },
+            label = { Text("Unidad (pzas, g, kg, ml, L)") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
         )
 
         Spacer(
@@ -1899,8 +1938,7 @@ fun PantallaEditarProducto(
                         ).show()
                     }
 
-                    cantidad.toIntOrNull() == null ||
-                            cantidad.toInt() <= 0 -> {
+                    cantidad.toDoubleOrNull()?.let { it > 0.0 && it.isFinite() } != true -> {
 
                         Toast.makeText(
                             context,
@@ -1909,7 +1947,11 @@ fun PantallaEditarProducto(
                         ).show()
                     }
 
-                    fechaCaducidad.isBlank() -> {
+                    unidad.isBlank() -> {
+                        Toast.makeText(context, "Escribe una unidad", Toast.LENGTH_SHORT).show()
+                    }
+
+                    fechaCaducidad.isBlank() || FechasCaducidad.diasRestantes(fechaCaducidad) == null -> {
 
                         Toast.makeText(
                             context,
@@ -1926,7 +1968,8 @@ fun PantallaEditarProducto(
                             hashMapOf<String, Any>(
                                 "nombre" to nombre.trim(),
                                 "categoria" to categoria.trim(),
-                                "cantidad" to cantidad.toInt(),
+                                "cantidad" to cantidad.toDouble(),
+                                "unidad" to unidad.trim(),
                                 "fechaCaducidad" to fechaCaducidad,
                                 "usuarioId" to usuario.uid,
                                 "correoUsuario" to (usuario.email ?: "")
