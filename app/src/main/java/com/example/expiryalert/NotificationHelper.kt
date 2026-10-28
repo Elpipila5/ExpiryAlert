@@ -20,6 +20,8 @@ object NotificationHelper {
     const val EXTRA_PRODUCTO_ID = "alerta_producto_id"
     const val EXTRA_USUARIO_ID = "alerta_usuario_id"
 
+    enum class EstadoAlerta { ENVIADA, YA_ENVIADA_HOY, BLOQUEADA }
+
     fun crearCanalNotificaciones(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val canal = NotificationChannel(
@@ -33,11 +35,22 @@ object NotificationHelper {
         }
     }
 
-    fun tienePermiso(context: Context): Boolean =
-        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+    fun tienePermiso(context: Context): Boolean {
+        val permisoAndroid = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
             ActivityCompat.checkSelfPermission(
                 context, Manifest.permission.POST_NOTIFICATIONS
             ) == PackageManager.PERMISSION_GRANTED
+        if (!permisoAndroid || !NotificationManagerCompat.from(context).areNotificationsEnabled()) {
+            return false
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val manager =
+                context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val canal = manager.getNotificationChannel(CHANNEL_ID)
+            if (canal != null && canal.importance == NotificationManager.IMPORTANCE_NONE) return false
+        }
+        return true
+    }
 
     fun mostrarNotificacionPrueba(context: Context) {
         if (!tienePermiso(context)) return
@@ -59,13 +72,13 @@ object NotificationHelper {
         nombreProducto: String,
         fechaCaducidad: String,
         diasRestantes: Long
-    ) {
-        if (!tienePermiso(context)) return
+    ): EstadoAlerta {
+        if (!tienePermiso(context)) return EstadoAlerta.BLOQUEADA
 
         val prefs = context.getSharedPreferences("avisos_caducidad", Context.MODE_PRIVATE)
         val clave = "$uid/$productoId"
         val hoy = SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).format(Date())
-        if (prefs.getString(clave, null) == hoy) return
+        if (prefs.getString(clave, null) == hoy) return EstadoAlerta.YA_ENVIADA_HOY
 
         val mensaje = when {
             diasRestantes < 0 -> "$nombreProducto ya está vencido."
@@ -97,13 +110,25 @@ object NotificationHelper {
             .setAutoCancel(true)
             .build()
 
-        NotificationManagerCompat.from(context).notify(idNotificacion, notificacion)
-        // commit síncrono: dos Workers en paralelo no deberían repetir el aviso.
+        try {
+            NotificationManagerCompat.from(context).notify(idNotificacion, notificacion)
+        } catch (_: SecurityException) {
+            return EstadoAlerta.BLOQUEADA
+        }
+        // Al llegar una alerta nueva, la confirmación de un aviso anterior
+        // ya no debe impedir que se abra el diálogo correspondiente.
+        AvisosAtendidos.nuevaAlerta(context, uid, productoId)
+        // Mantener la deduplicación entre comprobaciones manuales y periódicas.
         prefs.edit().putString(clave, hoy).commit()
+        return EstadoAlerta.ENVIADA
     }
 
     fun cancelarAlerta(context: Context, uid: String, productoId: String) {
-        NotificationManagerCompat.from(context).cancel("$uid/$productoId".hashCode())
+        val clave = "$uid/$productoId"
+        NotificationManagerCompat.from(context).cancel(clave.hashCode())
+        // Una fecha o un nombre editados deben poder generar una alerta actualizada hoy.
+        context.getSharedPreferences("avisos_caducidad", Context.MODE_PRIVATE)
+            .edit().remove(clave).apply()
     }
 
     /** Oculta notificaciones privadas de la cuenta al cerrar sesión. */

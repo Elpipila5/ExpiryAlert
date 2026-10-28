@@ -34,6 +34,7 @@ import com.example.expiryalert.ui.theme.ExpiryAlertTheme
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -41,14 +42,44 @@ import java.util.concurrent.TimeUnit
 
 class MainActivity : ComponentActivity() {
 
+    companion object {
+        private const val ESTADO_AVISO_UID = "expiry_aviso_uid"
+        private const val ESTADO_AVISO_ID = "expiry_aviso_id"
+    }
+
     private val avisoPendiente = mutableStateOf<Pair<String, String>?>(null)
 
-    private fun leerAviso(intent: Intent?) {
-        val uid = intent?.getStringExtra(NotificationHelper.EXTRA_USUARIO_ID)
-        val id = intent?.getStringExtra(NotificationHelper.EXTRA_PRODUCTO_ID)
-        if (!uid.isNullOrBlank() && !id.isNullOrBlank()) {
+    private fun limpiarExtrasAviso(origen: Intent?) {
+        origen?.removeExtra(NotificationHelper.EXTRA_USUARIO_ID)
+        origen?.removeExtra(NotificationHelper.EXTRA_PRODUCTO_ID)
+    }
+
+    /** Un Intent de notificación se debe consumir una sola vez. */
+    private fun leerAviso(origen: Intent?) {
+        val uid = origen?.getStringExtra(NotificationHelper.EXTRA_USUARIO_ID)
+        val id = origen?.getStringExtra(NotificationHelper.EXTRA_PRODUCTO_ID)
+        if (!uid.isNullOrBlank() && !id.isNullOrBlank() &&
+            !AvisosAtendidos.fueAtendido(this, uid, id)
+        ) {
             avisoPendiente.value = uid to id
         }
+        // Sin esto, Android vuelve a abrir el mismo diálogo al girar la pantalla.
+        limpiarExtrasAviso(origen)
+    }
+
+    private fun atenderAviso() {
+        avisoPendiente.value = null
+        limpiarExtrasAviso(intent)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        // Una confirmación NO atendida sobrevive a un giro del dispositivo.
+        // Una confirmación ya atendida no se reabre.
+        avisoPendiente.value?.let { (uid, id) ->
+            outState.putString(ESTADO_AVISO_UID, uid)
+            outState.putString(ESTADO_AVISO_ID, id)
+        }
+        super.onSaveInstanceState(outState)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -86,7 +117,19 @@ class MainActivity : ComponentActivity() {
 
         NotificationHelper.crearCanalNotificaciones(this)
         pedirPermisoNotificaciones()
-        leerAviso(intent)
+        if (savedInstanceState == null) {
+            leerAviso(intent)
+        } else {
+            val uid = savedInstanceState.getString(ESTADO_AVISO_UID)
+            val productoId = savedInstanceState.getString(ESTADO_AVISO_ID)
+            if (!uid.isNullOrBlank() && !productoId.isNullOrBlank() &&
+                !AvisosAtendidos.fueAtendido(this, uid, productoId)
+            ) {
+                avisoPendiente.value = uid to productoId
+            }
+            // Nunca reproducir el Intent anterior durante la recreación.
+            limpiarExtrasAviso(intent)
+        }
         FirebaseAuth.getInstance().currentUser?.uid?.let { uid ->
             ProgramadorAlertas.activar(this, uid)
         }
@@ -95,7 +138,7 @@ class MainActivity : ComponentActivity() {
             ExpiryAlertTheme {
                 ExpiryAlertApp(
                     aviso = avisoPendiente.value,
-                    avisoAtendido = { avisoPendiente.value = null },
+                    avisoAtendido = { atenderAviso() },
                     activarAlertas = { uid -> ProgramadorAlertas.activar(this, uid) },
                     cerrarAlertas = { uid -> ProgramadorAlertas.desactivar(this, uid) }
                 )
@@ -151,10 +194,12 @@ fun ExpiryAlertApp(
     }
 
     aviso?.let { (uid, id) ->
-        if (FirebaseAuth.getInstance().currentUser?.uid == uid) {
-            DialogoConfirmacionCaducidad(uid, id, avisoAtendido)
-        } else {
-            LaunchedEffect(uid, id) { avisoAtendido() }
+        when {
+            FirebaseAuth.getInstance().currentUser?.uid != uid ||
+                AvisosAtendidos.fueAtendido(contextoApp, uid, id) -> {
+                LaunchedEffect(uid, id) { avisoAtendido() }
+            }
+            else -> DialogoConfirmacionCaducidad(uid, id, avisoAtendido)
         }
     }
 
@@ -803,6 +848,9 @@ fun PantallaPrincipal(
         mutableStateOf<Map<String, Any>?>(null)
     }
 
+    var revisandoCaducidades by remember { mutableStateOf(false) }
+    var resultadoRevision by remember { mutableStateOf<String?>(null) }
+
     DisposableEffect(usuario?.uid) {
 
         if (usuario == null) {
@@ -827,14 +875,9 @@ fun PantallaPrincipal(
                     if (snapshot != null) {
 
                         productos = snapshot.documents.mapNotNull { documento ->
-
-                            val datos = documento.data?.toMutableMap()
-
-                            if (datos != null && datos["activo"] != false) {
-                                datos["id"] = documento.id
-                            }
-
-                            datos
+                            // Solo productos activos y siempre con su ID real de Firestore.
+                            // Antes se devolvían también los archivados, pero sin ID.
+                            InventarioProductos.productoVisible(documento.id, documento.data)
                         }
 
                         cargando = false
@@ -1095,13 +1138,29 @@ fun PantallaPrincipal(
         OutlinedButton(
             onClick = {
                 usuario?.uid?.let { uid ->
-                    ProgramadorAlertas.revisarAhora(context, uid)
-                    Toast.makeText(context, "Revisión solicitada. Las alertas pueden tardar unos momentos.", Toast.LENGTH_LONG).show()
+                    revisandoCaducidades = true
+                    resultadoRevision = null
+                    RevisionManualCaducidad.revisar(context, uid) { mensaje ->
+                        revisandoCaducidades = false
+                        resultadoRevision = mensaje
+                    }
                 }
             },
+            enabled = !revisandoCaducidades,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("🔔 Revisar caducidades ahora")
+            Text(if (revisandoCaducidades) "Revisando productos…" else "🔔 Revisar caducidades ahora")
+        }
+        if (revisandoCaducidades) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        }
+        resultadoRevision?.let { resultado ->
+            Text(
+                text = resultado,
+                color = Color.DarkGray,
+                fontSize = 14.sp,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -1635,9 +1694,10 @@ fun PantallaAgregarProducto(
                             .add(producto)
                             .addOnSuccessListener {
 
-                                // Integración Sprint 5: comprobar caducidad tras registrar.
+                                // Revisión inmediata con la app abierta; WorkManager sigue
+                                // realizando la revisión periódica en segundo plano.
                                 if (fechaCaducidad.isNotBlank()) {
-                                    ProgramadorAlertas.revisarAhora(context, usuario.uid)
+                                    RevisionManualCaducidad.revisar(context, usuario.uid)
                                 }
                                 cargando = false
 
@@ -2083,10 +2143,10 @@ fun PantallaEditarProducto(
                             .update(cambios)
                             .addOnSuccessListener {
 
-                                // Evitar avisos obsoletos y revisar la nueva fecha.
+                                // Cancelar avisos obsoletos y comprobar la nueva fecha.
                                 NotificationHelper.cancelarAlerta(context, usuario.uid, idProducto)
                                 if (fechaCaducidad.isNotBlank()) {
-                                    ProgramadorAlertas.revisarAhora(context, usuario.uid)
+                                    RevisionManualCaducidad.revisar(context, usuario.uid)
                                 }
                                 cargando = false
 
@@ -2182,8 +2242,9 @@ fun DialogoConfirmacionCaducidad(
     var error by remember(uid, productoId) { mutableStateOf<String?>(null) }
     var cargando by remember(uid, productoId) { mutableStateOf(true) }
     var guardando by remember(uid, productoId) { mutableStateOf(false) }
+    var intentoLectura by remember(uid, productoId) { mutableIntStateOf(0) }
 
-    LaunchedEffect(uid, productoId) {
+    LaunchedEffect(uid, productoId, intentoLectura) {
         db.collection("productos").document(productoId).get()
             .addOnSuccessListener { doc ->
                 val datos = doc.data
@@ -2194,12 +2255,31 @@ fun DialogoConfirmacionCaducidad(
                 ) {
                     error = "El producto ya no está disponible en tu inventario."
                 } else {
+                    val confirmacionHoy = doc.getTimestamp("ultimaConfirmacion")
+                        ?.toDate()?.let { FechasCaducidad.esHoy(it) } == true
+                    if (confirmacionHoy) {
+                        // El usuario ya respondió hoy (incluso si se recreó la Activity).
+                        AvisosAtendidos.marcarAtendido(context, uid, productoId)
+                        cerrar()
+                        return@addOnSuccessListener
+                    }
                     producto = datos
+                    error = null
                 }
                 cargando = false
             }
-            .addOnFailureListener {
-                error = "No fue posible consultar el producto: ${it.localizedMessage}"
+            .addOnFailureListener { excepcion ->
+                error = if (
+                    excepcion is FirebaseFirestoreException &&
+                    excepcion.code == FirebaseFirestoreException.Code.PERMISSION_DENIED
+                ) {
+                    "Firestore rechazó el acceso al producto (PERMISSION_DENIED). " +
+                        "Comprueba en Firebase Console que tu cuenta tenga permiso " +
+                        "para leer sus propios documentos en productos. " +
+                        "Puedes reintentar después de corregir las reglas."
+                } else {
+                    "No fue posible consultar el producto: ${excepcion.localizedMessage}"
+                }
                 cargando = false
             }
     }
@@ -2216,6 +2296,8 @@ fun DialogoConfirmacionCaducidad(
         }
         db.collection("productos").document(productoId).update(cambios)
             .addOnSuccessListener {
+                // Solo marcar atendido cuando Firebase confirmó el guardado.
+                AvisosAtendidos.marcarAtendido(context, uid, productoId)
                 NotificationHelper.cancelarAlerta(context, uid, productoId)
                 Toast.makeText(
                     context,
@@ -2253,6 +2335,17 @@ fun DialogoConfirmacionCaducidad(
         },
         dismissButton = {
             Column {
+                if (error != null) {
+                    TextButton(
+                        enabled = !cargando && !guardando,
+                        onClick = {
+                            producto = null
+                            error = null
+                            cargando = true
+                            intentoLectura++
+                        }
+                    ) { Text("Reintentar lectura") }
+                }
                 TextButton(
                     enabled = !cargando && !guardando && producto != null,
                     onClick = { confirmar(false) }
