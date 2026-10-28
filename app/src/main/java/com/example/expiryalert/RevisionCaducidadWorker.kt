@@ -51,7 +51,8 @@ class RevisionCaducidadWorker(
                 }
 
                 if (documento.getBoolean("activo") == false) return@forEach
-                if ((documento.getLong("cantidad") ?: 1L) <= 0L) return@forEach
+                val cantidadRestante = (documento.get("cantidad") as? Number)?.toDouble() ?: 1.0
+                if (cantidadRestante <= 0.0) return@forEach
 
                 val nombre = documento.getString("nombre").orEmpty()
                 val fecha = documento.getString("fechaCaducidad").orEmpty()
