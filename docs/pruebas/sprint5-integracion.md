@@ -89,6 +89,24 @@ El usuario confirmó expresamente las siguientes pruebas con el commit `5517e5b`
 
 El documento de evidencia del sprint está en [`docs/evidencias/sprint-05/registro.md`](../evidencias/sprint-05/registro.md). Los resultados se basan en el reporte del usuario; conservar capturas, modelo/version Android y APK sigue siendo necesario para documentar la entrega.
 
+### Incidencia: diálogo reaparece al girar el teléfono (28/10/2026)
+
+**Reportado por el usuario:** después de tocar la notificación y seleccionar «Sí, todavía lo tengo», al cambiar la orientación Android vuelve a mostrar el cuadro «¿Todavía tienes este producto?». En otra captura, al rotar también apareció `PERMISSION_DENIED: Missing or insufficient permissions` durante la consulta del documento.
+
+**Diagnóstico del código anterior:** `MainActivity.onCreate()` volvía a leer los extras del `Intent` de la notificación al recrear la actividad. Esto podía volver a abrir un aviso que ya había sido atendido. **Corrección implementada (pendiente de prueba por el usuario):** el `Intent` se consume una sola vez; se guarda solo el aviso realmente pendiente en `onSaveInstanceState` y se restaura en rotación; cuando la lectura confirma `ultimaConfirmacion` de hoy, se cierra el diálogo. Se añadió mensaje de error de permisos y botón «Reintentar lectura».
+
+**Prueba de regresión:**
+
+1. Actualizar la rama `feature/sprint5-integracion-seguridad-pruebas`, instalar APK nuevo.
+2. Crear un producto de prueba distinto y tocar su notificación.
+3. Presionar «Sí, todavía lo tengo» y esperar «Producto confirmado». Comprobar que el producto continúa visible.
+4. Rotar el teléfono varias veces. **Esperado:** no se vuelve a abrir el diálogo.
+5. Verificar en Firestore que el documento de prueba contiene `ultimaConfirmacion` del día actual.
+6. Repetir con otro producto **sin confirmar**, y rotar mientras el diálogo sigue visible: se debe conservar la opción de responder (no perder el aviso).
+7. Si aparece `PERMISSION_DENIED`, capturar el error, verificar las reglas **realmente publicadas** en Firebase y confirmar que el documento tiene `usuarioId` de la cuenta autenticada. Las reglas versionadas en GitHub no se publican automáticamente.
+
+**Estado:** incidencias corregidas en código, pendientes de volver a probar en el dispositivo y en Firebase. No aprobar la confirmación de producto solo porque el diálogo se cierra.
+
 ## Orden de demostración sugerido (flujo extremo a extremo)
 
 1. Abrir ExpiryAlert e iniciar sesión con una **cuenta de prueba A**. Mostrar la lista de productos vinculada al usuario.
