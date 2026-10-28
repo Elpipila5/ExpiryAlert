@@ -15,6 +15,26 @@ El probador confirmó **cuatro comprobaciones aprobadas** y **dos pendientes**, 
 | Responder/archivar desde la notificación | Pendiente | Evidenciar diálogo y cambio de documento |
 | Cierre de sesión oculta notificaciones privadas | Aprobado | Captura antes/después |
 
+### Corrección del diagnóstico (28/10/2026)
+
+Tras informar el usuario que solo aparecía **«Las alertas pueden tardar unos momentos»** y no llegaba ningún aviso, se reemplazó la comprobación manual a través de WorkManager por una consulta **inmediata** de Firestore desde la app abierta. La revisión periódica con WorkManager **se mantiene**, pero es independiente.
+
+**Procedimiento actualizado (tras hacer Git Fetch/Pull y compilar esta rama):**
+
+1. Iniciar sesión y registrar **un producto nuevo** con nombre distintivo, cantidad mayor a cero y fecha **29/10/2026** (fecha de mañana para la prueba del 28 de octubre).
+2. Guardarlo: el código solicita una comprobación inmediata del inventario con Firestore. Verificar que haya conexión.
+3. Si no aparece aviso, ir al inventario y pulsar **🔔 Revisar caducidades ahora**.
+4. **Leer el texto del resultado debajo del botón**. Ya no aparece solamente un mensaje genérico:
+   - `Se enviaron N alertas`: abrir la bandeja y tocar una; si no se ve, revisar ajustes del teléfono, modo No molestar y categoría/canal de notificaciones.
+   - `No se pueden mostrar alertas`: activar permiso de notificaciones para ExpiryAlert y canal «Alertas de caducidad».
+   - `Ninguno requiere aviso`: revisar la fecha real de `fechaCaducidad`, `cantidad > 0`, que `activo != false` y que corresponde a la cuenta actual.
+   - `Ya se notificaron hoy` o `confirmaste hoy`: la app evita duplicados; crear un producto **distinto** para repetir la prueba, no reinstalar ni borrar datos personales.
+   - `No se pudo consultar Firestore`: revisar internet y reglas publicadas en Firebase. Guardar captura de todo el error, especialmente `PERMISSION_DENIED`.
+5. Si llega una notificación, tocarla para abrir **¿Todavía tienes este producto?**. Verificar ambas respuestas con **dos productos diferentes** y sus cambios en Firestore.
+6. Registrar resultado real y evidencia antes de marcar los casos pendientes como aprobados.
+
+No se afirma que WorkManager ejecute a una hora exacta: Android puede retrasar sus tareas. No se consideran finalizados los casos hasta observar que las notificaciones se muestran y la confirmación/archivado persiste.
+
 ### Guía específica para ejecutar las dos pruebas pendientes
 
 > **Importante:** `ProgramadorAlertas.revisarAhora()` solicita la tarea a WorkManager; no garantiza ejecutarla al instante. Un producto ya notificado hoy tampoco generará un segundo aviso el mismo día. Usar **productos nuevos** para cada intento.
