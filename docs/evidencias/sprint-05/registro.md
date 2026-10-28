@@ -17,7 +17,7 @@
 | Código de barras (mejora del registro) | Escaneo y autocompletado | Reportado aprobado | PR #18; falta captura |
 | F04, estado de caducidad | Clasificación, fecha pendiente y vista | Flujo integrado; cobertura de fechas límite aún pendiente | PR #18 |
 | F05, alertas y confirmación | Alerta automática con app abierta; archivar desde notificación | Alerta y archivo reportados aprobados | PR #18; falta captura |
-| F05, conservar producto | Opción «Sí, todavía lo tengo» | **Pendiente de comprobación explícita** | Registrar en Firestore `ultimaConfirmacion` |
+| F05, conservar producto | Opción «Sí, todavía lo tengo» | **Aprobado en la experiencia del teléfono (reportado por el usuario)**: tras responder y girar la pantalla ya no reaparece el diálogo | Confirmar en Firestore `ultimaConfirmacion` y adjuntar captura |
 | PB11, seguridad Firestore | Reglas por `usuarioId` preparadas | **Pendiente de validar y publicar en Firebase** | `firestore.rules`; `docs/seguridad-firestore.md` |
 | PB11, calidad y evidencia | Matriz y correcciones de defectos | En proceso | `docs/pruebas/sprint5-integracion.md` |
 
@@ -29,6 +29,12 @@
 | 28/10/2026 | Notificación llega tras guardar producto próximo sin pulsar botón manual | No implica que se haya probado WorkManager con la aplicación cerrada |
 | 28/10/2026 | El usuario reportó bug: archivados visibles y borrado fallaba por falta de ID | Corregido en `InventarioProductos.productoVisible` |
 | 28/10/2026 | Tras instalar commit `5517e5b`, usuario confirmó: archivados antiguos ocultos, archivar desde notificación funciona y Eliminar no falla por ID | Se conserva historial archivado en Firestore; no se borra automáticamente |
+
+## Verificación de corrección de rotación (28/10/2026)
+
+Después de reportar que al girar el teléfono reaparecía el diálogo con **ambas respuestas**, se incorporó un control de notificaciones atendidas y una corrección en el procesamiento del Intent de Android, con versión de aplicación `1.0.1-sprint5`. El usuario comunicó posteriormente: **«listo, ya funciona bien»**, en respuesta a la prueba de ambas opciones.
+
+**Resultado reportado:** diálogo de confirmación ya no reaparece indebidamente al rotar. Esta validación es del comportamiento visible en el teléfono. **No se ha comprobado aún en esta conversación el valor concreto de `ultimaConfirmacion` dentro de Firestore, ni la publicación de las reglas de seguridad**. Captura, versión exacta del APK instalado y modelo de teléfono están pendientes de adjuntar.
 
 ## Pruebas funcionales reportadas
 
@@ -44,7 +50,7 @@
 | Archivar desde notificación | Desaparece del inventario activo | Aprobado (informado) | Diálogo y cambio de `activo=false` |
 | Productos archivados antes de corregir | Dejan de mostrarse | Aprobado (informado) | Captura inventario actualizado |
 | Eliminar producto activo | No aparece error de ID; se elimina | Aprobado (informado) | Captura antes/después |
-| Conservar producto desde notificación | Aún no se informó resultado específico | Pendiente | Producto permanece y `ultimaConfirmacion` existe |
+| Conservar producto desde notificación | El usuario confirmó que las respuestas funcionan tras corregir la rotación | Aprobado (informado, funcionamiento visual); verificación de `ultimaConfirmacion` pendiente | Captura de producto visible y campo `ultimaConfirmacion` |
 | Acceso entre dos cuentas con reglas publicadas | No confirmado | Pendiente | Pruebas de acceso permitidas/denegadas |
 | Notificación periódica con app totalmente cerrada | No confirmado | Pendiente (opcional en demo; documentar comportamiento) | Evidencia de WorkManager, sin garantía de horario exacto |
 
@@ -52,7 +58,7 @@
 
 **Fecha:** 28/10/2026 (revisión en curso).  
 **Incremento probado:** app Android compilable con acceso de cuenta, inventario CRUD, escaneo de productos, OCR, aviso al guardar, archivo y eliminación.  
-**Demostración completa:** pendiente de evidencia de «Sí, todavía lo tengo» y del aislamiento entre cuentas con reglas realmente publicadas.  
+**Demostración completa:** respuesta «Sí, todavía lo tengo» reportada funcionando; quedan pendientes evidencia visual y verificación de `ultimaConfirmacion`, además de seguridad del aislamiento entre cuentas con reglas realmente publicadas.  
 **Retroalimentación del equipo/docente:** no suministrada.  
 **Build distribuible o enlace a APK:** pendiente.  
 **Aportes de los tres integrantes:** no comprobados aún; registrar sus commits/revisiones, sin inferir identidades.
@@ -66,4 +72,4 @@
 
 ## Cierre
 
-No marcar Sprint 5 como «Terminado» hasta verificar la opción de conservar producto, ejecutar pruebas de seguridad y adjuntar evidencias/build. Consultar la [Definition of Done](../../equipo.md#definition-of-done).
+No marcar Sprint 5 como «Terminado» hasta comprobar en Firebase la escritura de `ultimaConfirmacion` y las reglas publicadas, ejecutar pruebas de seguridad y adjuntar evidencias/build. Consultar la [Definition of Done](../../equipo.md#definition-of-done).
