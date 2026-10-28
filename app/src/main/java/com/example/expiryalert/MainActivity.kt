@@ -1212,6 +1212,13 @@ fun TarjetaProducto(
                 fontSize = 16.sp,
                 color = Color.Gray
             )
+            if (marcaMostrada.isNotBlank()) {
+                Text(
+                    text = "Marca: $marcaMostrada",
+                    fontSize = 14.sp,
+                    color = Color.Gray
+                )
+            }
 
             Spacer(modifier = Modifier.height(4.dp))
 
@@ -1391,6 +1398,12 @@ fun PantallaAgregarProducto(
                 }
             }
         }
+
+        Text(
+            "Catálogo de productos: Open Food Facts (licencia ODbL). " +
+                "Verifica nombre, presentación y cantidad antes de guardar.",
+            style = MaterialTheme.typography.bodySmall
+        )
 
         Spacer(modifier = Modifier.height(12.dp))
         HorizontalDivider()
@@ -1587,7 +1600,7 @@ fun PantallaAgregarProducto(
 
                         Toast.makeText(
                             context,
-                            "Selecciona la fecha de caducidad",
+                            "Fecha inválida. Corrígela o déjala pendiente.",
                             Toast.LENGTH_SHORT
                         ).show()
                     }
@@ -2032,7 +2045,7 @@ fun PantallaEditarProducto(
 
                         Toast.makeText(
                             context,
-                            "Selecciona una fecha",
+                            "Fecha inválida. Corrígela o déjala pendiente.",
                             Toast.LENGTH_SHORT
                         ).show()
                     }
