@@ -115,6 +115,9 @@ object NotificationHelper {
         } catch (_: SecurityException) {
             return EstadoAlerta.BLOQUEADA
         }
+        // Al llegar una alerta nueva, la confirmación de un aviso anterior
+        // ya no debe impedir que se abra el diálogo correspondiente.
+        AvisosAtendidos.nuevaAlerta(context, uid, productoId)
         // Mantener la deduplicación entre comprobaciones manuales y periódicas.
         prefs.edit().putString(clave, hoy).commit()
         return EstadoAlerta.ENVIADA
