@@ -34,6 +34,7 @@ import com.example.expiryalert.ui.theme.ExpiryAlertTheme
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -2235,8 +2236,9 @@ fun DialogoConfirmacionCaducidad(
     var error by remember(uid, productoId) { mutableStateOf<String?>(null) }
     var cargando by remember(uid, productoId) { mutableStateOf(true) }
     var guardando by remember(uid, productoId) { mutableStateOf(false) }
+    var intentoLectura by remember(uid, productoId) { mutableIntStateOf(0) }
 
-    LaunchedEffect(uid, productoId) {
+    LaunchedEffect(uid, productoId, intentoLectura) {
         db.collection("productos").document(productoId).get()
             .addOnSuccessListener { doc ->
                 val datos = doc.data
@@ -2247,12 +2249,31 @@ fun DialogoConfirmacionCaducidad(
                 ) {
                     error = "El producto ya no está disponible en tu inventario."
                 } else {
+                    val confirmacionHoy = doc.getTimestamp("ultimaConfirmacion")
+                        ?.toDate()?.let { FechasCaducidad.esHoy(it) } == true
+                    if (confirmacionHoy) {
+                        // Si la respuesta se guardó antes de la rotación,
+                        // no volver a pedirla después de recrear la Activity.
+                        cerrar()
+                        return@addOnSuccessListener
+                    }
                     producto = datos
+                    error = null
                 }
                 cargando = false
             }
-            .addOnFailureListener {
-                error = "No fue posible consultar el producto: ${it.localizedMessage}"
+            .addOnFailureListener { excepcion ->
+                error = if (
+                    excepcion is FirebaseFirestoreException &&
+                    excepcion.code == FirebaseFirestoreException.Code.PERMISSION_DENIED
+                ) {
+                    "Firestore rechazó el acceso al producto (PERMISSION_DENIED). " +
+                        "Comprueba en Firebase Console que tu cuenta tenga permiso " +
+                        "para leer sus propios documentos en productos. " +
+                        "Puedes reintentar después de corregir las reglas."
+                } else {
+                    "No fue posible consultar el producto: ${excepcion.localizedMessage}"
+                }
                 cargando = false
             }
     }
@@ -2306,6 +2327,17 @@ fun DialogoConfirmacionCaducidad(
         },
         dismissButton = {
             Column {
+                if (error != null) {
+                    TextButton(
+                        enabled = !cargando && !guardando,
+                        onClick = {
+                            producto = null
+                            error = null
+                            cargando = true
+                            intentoLectura++
+                        }
+                    ) { Text("Reintentar lectura") }
+                }
                 TextButton(
                     enabled = !cargando && !guardando && producto != null,
                     onClick = { confirmar(false) }
