@@ -4,13 +4,13 @@ Aplicación para la detección de productos que ya van a expirar, ya expiraron o
 
 Permite controlar la caducidad y las cantidades de un inventario personal. El proyecto pertenece a **Desarrollo Móvil Integral**, grupo **IDGS10**, Universidad Tecnológica de Montemorelos, septiembre-noviembre de 2026.
 
-**Estado del repositorio:** base de colaboración y planificación. El código que el equipo ya tiene debe incorporarse mediante un pull request. Las funciones del backlog permanecen pendientes de verificar; esta documentación no acredita que estén implementadas.
+**Estado del repositorio (Sprint 5):** contiene una aplicación Android nativa en Kotlin y Jetpack Compose con Firebase Auth/Firestore, inventario, registro manual, OCR y código de barras, y alertas de caducidad. Las funcionalidades y la seguridad deben comprobarse en Android Studio y Firebase antes de declararse terminadas. Ver [matriz del Sprint 5](docs/pruebas/sprint5-integracion.md).
 
 ## Empieza aquí
 
 1. Consulta las [tareas abiertas](https://github.com/Elpipila5/ExpiryAlert/issues) y toma una tarea pequeña.
 2. Sigue la [guía para subir avances](CONTRIBUTING.md).
-3. Incorpora el proyecto existente dentro de [`app/`](app/README.md), conservando su estructura y dependencias.
+3. Abre el proyecto existente de Android Studio y consulta la [instalación real](docs/instalacion.md).
 4. Abre un [pull request](https://github.com/Elpipila5/ExpiryAlert/pulls) hacia `main` y pide revisión a otro integrante.
 5. Registra las pruebas y evidencias antes de marcar la tarea como terminada.
 
@@ -50,4 +50,4 @@ Docente: **Ing. Mario Alberto Chacón Muñoz**. Las responsabilidades de product
 | Presentación final | 24 y 25 de noviembre de 2026 | Aplicación distribuible, código, pruebas y documentación. |
 | Cierre | 26 y 27 de noviembre de 2026 | Cierre y retroalimentación. |
 
-Consulta los [nueve sprints](docs/sprints.md), la [Definition of Done](docs/equipo.md#definition-of-done) y la [instalación](docs/instalacion.md). Los comandos de ejecución se documentarán al incorporar el código y confirmar la tecnología que ya utiliza el equipo.
+Consulta los [nueve sprints](docs/sprints.md), la [Definition of Done](docs/equipo.md#definition-of-done) y la [instalación](docs/instalacion.md). Los comandos de ejecución, build y pruebas están documentados en [instalación](docs/instalacion.md). Las [reglas de Firestore](firestore.rules) requieren publicación y pruebas manuales en Firebase.
