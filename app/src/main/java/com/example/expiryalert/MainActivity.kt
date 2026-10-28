@@ -1272,68 +1272,12 @@ fun TarjetaProducto(
 // CALCULAR ESTADO
 // ----------------------------------------------------
 
-fun calcularEstadoCaducidad(
-    fechaCaducidad: String
-): String {
-
-    return try {
-
-        val formato =
-            SimpleDateFormat(
-                "dd/MM/yyyy",
-                Locale.getDefault()
-            )
-
-        formato.isLenient = false
-
-        val fechaProducto =
-            formato.parse(fechaCaducidad)
-                ?: return "Seguro"
-
-        val hoy =
-            Calendar.getInstance().apply {
-
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }
-
-        val fechaFinal =
-            Calendar.getInstance().apply {
-
-                time = fechaProducto
-
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }
-
-        val diferencia =
-            fechaFinal.timeInMillis -
-                    hoy.timeInMillis
-
-        val diasRestantes =
-            TimeUnit.MILLISECONDS.toDays(
-                diferencia
-            )
-
-        when {
-
-            diasRestantes < 0 ->
-                "Vencido"
-
-            diasRestantes <= 7 ->
-                "Próximo a caducar"
-
-            else ->
-                "Seguro"
-        }
-
-    } catch (e: Exception) {
-
-        "Seguro"
+fun calcularEstadoCaducidad(fechaCaducidad: String): String {
+    val dias = FechasCaducidad.diasRestantes(fechaCaducidad) ?: return "Fecha inválida"
+    return when {
+        dias < 0 -> "Vencido"
+        dias <= 7 -> "Próximo a caducar"
+        else -> "Seguro"
     }
 }
 
