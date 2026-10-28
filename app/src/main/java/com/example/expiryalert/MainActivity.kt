@@ -142,6 +142,7 @@ fun ExpiryAlertApp(
     var productoEditar by remember {
         mutableStateOf<Map<String, Any>?>(null)
     }
+    val contextoApp = LocalContext.current
 
     LaunchedEffect(pantalla) {
         if (pantalla == "principal") {
@@ -206,8 +207,13 @@ fun ExpiryAlertApp(
                     pantalla = "editarProducto"
                 },
                 cerrarSesion = {
-                    FirebaseAuth.getInstance().currentUser?.uid?.let(cerrarAlertas)
+                    FirebaseAuth.getInstance().currentUser?.uid?.let { uid ->
+                        cerrarAlertas(uid)
+                        NotificationHelper.cancelarAlertasDeUsuario(contextoApp, uid)
+                    }
                     FirebaseAuth.getInstance().signOut()
+                    productoEditar = null
+                    avisoAtendido()
                     pantalla = "inicio"
                 }
             )
@@ -1629,6 +1635,10 @@ fun PantallaAgregarProducto(
                             .add(producto)
                             .addOnSuccessListener {
 
+                                // Integración Sprint 5: comprobar caducidad tras registrar.
+                                if (fechaCaducidad.isNotBlank()) {
+                                    ProgramadorAlertas.revisarAhora(context, usuario.uid)
+                                }
                                 cargando = false
 
                                 Toast.makeText(
@@ -2073,6 +2083,11 @@ fun PantallaEditarProducto(
                             .update(cambios)
                             .addOnSuccessListener {
 
+                                // Evitar avisos obsoletos y revisar la nueva fecha.
+                                NotificationHelper.cancelarAlerta(context, usuario.uid, idProducto)
+                                if (fechaCaducidad.isNotBlank()) {
+                                    ProgramadorAlertas.revisarAhora(context, usuario.uid)
+                                }
                                 cargando = false
 
                                 Toast.makeText(
