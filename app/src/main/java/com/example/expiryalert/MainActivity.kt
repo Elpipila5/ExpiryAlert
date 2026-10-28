@@ -1160,6 +1160,7 @@ fun TarjetaProducto(
 
     val estado =
         calcularEstadoCaducidad(fechaCaducidad)
+    val marcaMostrada = producto["marca"]?.toString().orEmpty()
 
     val colorEstado = when (estado) {
 
@@ -1168,6 +1169,8 @@ fun TarjetaProducto(
 
         "Próximo a caducar" ->
             Color(0xFFF57C00)
+
+        "Caducidad pendiente", "Fecha inválida" -> Color.Gray
 
         else ->
             Color(0xFF2E7D32)
@@ -1178,6 +1181,8 @@ fun TarjetaProducto(
         "Vencido" -> "🔴"
 
         "Próximo a caducar" -> "🟡"
+
+        "Caducidad pendiente", "Fecha inválida" -> "⚪"
 
         else -> "🟢"
     }
@@ -1207,6 +1212,13 @@ fun TarjetaProducto(
                 fontSize = 16.sp,
                 color = Color.Gray
             )
+            if (marcaMostrada.isNotBlank()) {
+                Text(
+                    text = "Marca: $marcaMostrada",
+                    fontSize = 14.sp,
+                    color = Color.Gray
+                )
+            }
 
             Spacer(modifier = Modifier.height(4.dp))
 
@@ -1219,7 +1231,7 @@ fun TarjetaProducto(
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = "Caduca: $fechaCaducidad",
+                text = if (fechaCaducidad.isBlank()) "Caducidad: pendiente" else "Caduca: $fechaCaducidad",
                 fontSize = 16.sp,
                 color = Color.Gray
             )
@@ -1275,6 +1287,7 @@ fun TarjetaProducto(
 // ----------------------------------------------------
 
 fun calcularEstadoCaducidad(fechaCaducidad: String): String {
+    if (fechaCaducidad.isBlank()) return "Caducidad pendiente"
     val dias = FechasCaducidad.diasRestantes(fechaCaducidad) ?: return "Fecha inválida"
     return when {
         dias < 0 -> "Vencido"
@@ -1294,8 +1307,10 @@ fun PantallaAgregarProducto(
 ) {
 
     var nombre by remember { mutableStateOf("") }
-    var categoria by remember { mutableStateOf("") }
-    var cantidad by remember { mutableStateOf("") }
+    var categoria by remember { mutableStateOf("Sin categoría") }
+    var marca by remember { mutableStateOf("") }
+    var codigoBarras by remember { mutableStateOf("") }
+    var cantidad by remember { mutableStateOf("1") }
     var unidad by remember { mutableStateOf("pzas") }
     var fechaCaducidad by remember { mutableStateOf("") }
     var cargando by remember { mutableStateOf(false) }
@@ -1364,18 +1379,43 @@ fun PantallaAgregarProducto(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Registra la fecha de caducidad",
+            text = "Escanea el producto o regístralo manualmente",
             fontSize = 16.sp,
             color = Color.Gray
         )
 
         Spacer(modifier = Modifier.height(18.dp))
 
+        EscanerCodigoProducto { codigo, datos ->
+            codigoBarras = codigo
+            if (datos != null) {
+                if (datos.nombre.isNotBlank()) nombre = datos.nombre
+                marca = datos.marca
+                categoria = datos.categoria.ifBlank { "Alimentos" }
+                if (datos.cantidad.isNotBlank()) {
+                    cantidad = datos.cantidad
+                    unidad = datos.unidad.ifBlank { "pzas" }
+                }
+            }
+        }
+
+        Text(
+            "Catálogo de productos: Open Food Facts (licencia ODbL). " +
+                "Verifica nombre, presentación y cantidad antes de guardar.",
+            style = MaterialTheme.typography.bodySmall
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+        HorizontalDivider()
+        Spacer(modifier = Modifier.height(12.dp))
+
         CapturaOCRProducto { fecha, cantidadDetectada, unidadDetectada ->
-            fechaCaducidad = fecha
-            cantidad = cantidadDetectada
-            unidad = unidadDetectada
-            Toast.makeText(context, "Datos revisados. Completa el nombre y guarda.", Toast.LENGTH_LONG).show()
+            if (fecha.isNotBlank()) fechaCaducidad = fecha
+            if (cantidadDetectada.isNotBlank()) {
+                cantidad = cantidadDetectada
+                unidad = unidadDetectada.ifBlank { unidad }
+            }
+            Toast.makeText(context, "Datos de etiqueta aplicados. Revisa y guarda.", Toast.LENGTH_LONG).show()
         }
 
         Spacer(modifier = Modifier.height(30.dp))
@@ -1408,6 +1448,16 @@ fun PantallaAgregarProducto(
             placeholder = {
                 Text("Ejemplo: Lácteos")
             },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+
+        Spacer(modifier = Modifier.height(15.dp))
+
+        OutlinedTextField(
+            value = marca,
+            onValueChange = { marca = it },
+            label = { Text("Marca (opcional)") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
@@ -1453,7 +1503,7 @@ fun PantallaAgregarProducto(
             onValueChange = {},
             readOnly = true,
             label = {
-                Text("Fecha de caducidad")
+                Text("Fecha de caducidad (opcional)")
             },
             placeholder = {
                 Text("Selecciona una fecha")
@@ -1475,6 +1525,16 @@ fun PantallaAgregarProducto(
                 text = "📅 Seleccionar fecha",
                 color = Color(0xFF6750A4)
             )
+        }
+
+        if (fechaCaducidad.isBlank()) {
+            Text(
+                "Puedes guardar sin caducidad y agregarla después. " +
+                    "Hasta entonces no se programarán alertas para este producto.",
+                style = MaterialTheme.typography.bodySmall
+            )
+        } else {
+            TextButton(onClick = { fechaCaducidad = "" }) { Text("Dejar caducidad pendiente") }
         }
 
         Spacer(modifier = Modifier.height(30.dp))
@@ -1536,11 +1596,11 @@ fun PantallaAgregarProducto(
                         Toast.makeText(context, "Escribe una unidad", Toast.LENGTH_SHORT).show()
                     }
 
-                    fechaCaducidad.isBlank() || FechasCaducidad.diasRestantes(fechaCaducidad) == null -> {
+                    fechaCaducidad.isNotBlank() && FechasCaducidad.diasRestantes(fechaCaducidad) == null -> {
 
                         Toast.makeText(
                             context,
-                            "Selecciona la fecha de caducidad",
+                            "Fecha inválida. Corrígela o déjala pendiente.",
                             Toast.LENGTH_SHORT
                         ).show()
                     }
@@ -1553,10 +1613,13 @@ fun PantallaAgregarProducto(
                             hashMapOf(
                                 "nombre" to nombre.trim(),
                                 "categoria" to categoria.trim(),
+                                "marca" to marca.trim(),
+                                "codigoBarras" to codigoBarras,
                                 "cantidad" to cantidad.toDouble(),
                                 "cantidadInicial" to cantidad.toDouble(),
                                 "unidad" to unidad.trim(),
                                 "fechaCaducidad" to fechaCaducidad,
+                                "caducidadPendiente" to fechaCaducidad.isBlank(),
                                 "usuarioId" to usuario.uid,
                                 "correoUsuario" to (usuario.email ?: ""),
                                 "fechaCreacion" to Timestamp.now()
@@ -1670,6 +1733,14 @@ fun PantallaEditarProducto(
 
     var unidad by remember(producto) {
         mutableStateOf(producto["unidad"]?.toString() ?: "pzas")
+    }
+
+    var marca by remember(producto) {
+        mutableStateOf(producto["marca"]?.toString().orEmpty())
+    }
+
+    var codigoBarras by remember(producto) {
+        mutableStateOf(producto["codigoBarras"]?.toString().orEmpty())
     }
 
     var fechaCaducidad by remember(producto) {
@@ -1813,9 +1884,17 @@ fun PantallaEditarProducto(
             singleLine = true
         )
 
-        Spacer(
-            modifier = Modifier.height(15.dp)
+        Spacer(modifier = Modifier.height(15.dp))
+
+        OutlinedTextField(
+            value = marca,
+            onValueChange = { marca = it },
+            label = { Text("Marca (opcional)") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
         )
+
+        Spacer(modifier = Modifier.height(15.dp))
 
         OutlinedTextField(
             value = cantidad,
@@ -1858,7 +1937,7 @@ fun PantallaEditarProducto(
             onValueChange = {},
             readOnly = true,
             label = {
-                Text("Fecha de caducidad")
+                Text("Fecha de caducidad (opcional)")
             },
             modifier =
                 Modifier.fillMaxWidth()
@@ -1882,6 +1961,17 @@ fun PantallaEditarProducto(
                 text = "📅 Cambiar fecha",
                 color = Color(0xFF6750A4)
             )
+        }
+
+        if (fechaCaducidad.isBlank()) {
+            Text(
+                "Sin fecha todavía: este producto no generará alertas de caducidad.",
+                style = MaterialTheme.typography.bodySmall
+            )
+        } else {
+            TextButton(onClick = { fechaCaducidad = "" }) {
+                Text("Dejar caducidad pendiente")
+            }
         }
 
         Spacer(
@@ -1951,11 +2041,11 @@ fun PantallaEditarProducto(
                         Toast.makeText(context, "Escribe una unidad", Toast.LENGTH_SHORT).show()
                     }
 
-                    fechaCaducidad.isBlank() || FechasCaducidad.diasRestantes(fechaCaducidad) == null -> {
+                    fechaCaducidad.isNotBlank() && FechasCaducidad.diasRestantes(fechaCaducidad) == null -> {
 
                         Toast.makeText(
                             context,
-                            "Selecciona una fecha",
+                            "Fecha inválida. Corrígela o déjala pendiente.",
                             Toast.LENGTH_SHORT
                         ).show()
                     }
@@ -1968,9 +2058,12 @@ fun PantallaEditarProducto(
                             hashMapOf<String, Any>(
                                 "nombre" to nombre.trim(),
                                 "categoria" to categoria.trim(),
+                                "marca" to marca.trim(),
+                                "codigoBarras" to codigoBarras,
                                 "cantidad" to cantidad.toDouble(),
                                 "unidad" to unidad.trim(),
                                 "fechaCaducidad" to fechaCaducidad,
+                                "caducidadPendiente" to fechaCaducidad.isBlank(),
                                 "usuarioId" to usuario.uid,
                                 "correoUsuario" to (usuario.email ?: "")
                             )

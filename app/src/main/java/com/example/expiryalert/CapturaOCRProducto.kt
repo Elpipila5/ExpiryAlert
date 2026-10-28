@@ -96,10 +96,10 @@ fun CapturaOCRProducto(
         if (uri != null) analizarImagen(uri)
     }
 
-    Text("Registro por fotografía (OCR)", style = MaterialTheme.typography.titleMedium)
+    Text("Leer etiqueta y caducidad (opcional)", style = MaterialTheme.typography.titleMedium)
     Text(
-        "Fotografía la etiqueta para sugerir fecha y cantidad. " +
-            "Revisa y corrige los datos antes de guardarlos.",
+        "Fotografía la fecha impresa en el envase. " +
+            "No identifica códigos de barras. Puedes usar solamente los campos que reconozca.",
         style = MaterialTheme.typography.bodySmall
     )
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -147,7 +147,7 @@ fun CapturaOCRProducto(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("El OCR puede equivocarse. Corrige lo necesario:")
+                    Text("El OCR puede equivocarse. Corrige los datos que quieras usar; deja vacíos los demás.")
                     OutlinedTextField(
                         modifier = Modifier.fillMaxWidth(),
                         value = fechaCorregida,
@@ -179,10 +179,11 @@ fun CapturaOCRProducto(
             confirmButton = {
                 val cantidadNumero = cantidadCorregida.replace(',', '.').toDoubleOrNull()
                 TextButton(
-                    enabled = FechasCaducidad.diasRestantes(fechaCorregida) != null &&
-                        cantidadNumero != null &&
-                        cantidadNumero > 0.0 && cantidadNumero.isFinite() &&
-                        unidadCorregida.isNotBlank(),
+                    enabled = (fechaCorregida.isBlank() ||
+                        FechasCaducidad.diasRestantes(fechaCorregida) != null) &&
+                        (cantidadCorregida.isBlank() ||
+                            (cantidadNumero != null && cantidadNumero > 0.0 &&
+                                cantidadNumero.isFinite() && unidadCorregida.isNotBlank())),
                     onClick = {
                         alConfirmar(
                             fechaCorregida,

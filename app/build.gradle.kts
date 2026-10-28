@@ -41,6 +41,7 @@ dependencies {
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.mlkit:text-recognition:16.0.1")
+    implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
     implementation("androidx.work:work-runtime-ktx:2.10.5")
 
     implementation(platform(libs.androidx.compose.bom))
