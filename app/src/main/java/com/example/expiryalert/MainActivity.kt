@@ -41,14 +41,42 @@ import java.util.concurrent.TimeUnit
 
 class MainActivity : ComponentActivity() {
 
+    companion object {
+        private const val ESTADO_AVISO_UID = "expiry_aviso_uid"
+        private const val ESTADO_AVISO_ID = "expiry_aviso_id"
+    }
+
     private val avisoPendiente = mutableStateOf<Pair<String, String>?>(null)
 
-    private fun leerAviso(intent: Intent?) {
-        val uid = intent?.getStringExtra(NotificationHelper.EXTRA_USUARIO_ID)
-        val id = intent?.getStringExtra(NotificationHelper.EXTRA_PRODUCTO_ID)
+    private fun limpiarExtrasAviso(origen: Intent?) {
+        origen?.removeExtra(NotificationHelper.EXTRA_USUARIO_ID)
+        origen?.removeExtra(NotificationHelper.EXTRA_PRODUCTO_ID)
+    }
+
+    /** Un Intent de notificación se debe consumir una sola vez. */
+    private fun leerAviso(origen: Intent?) {
+        val uid = origen?.getStringExtra(NotificationHelper.EXTRA_USUARIO_ID)
+        val id = origen?.getStringExtra(NotificationHelper.EXTRA_PRODUCTO_ID)
         if (!uid.isNullOrBlank() && !id.isNullOrBlank()) {
             avisoPendiente.value = uid to id
         }
+        // Sin esto, Android vuelve a abrir el mismo diálogo al girar la pantalla.
+        limpiarExtrasAviso(origen)
+    }
+
+    private fun atenderAviso() {
+        avisoPendiente.value = null
+        limpiarExtrasAviso(intent)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        // Una confirmación NO atendida sobrevive a un giro del dispositivo.
+        // Una confirmación ya atendida no se reabre.
+        avisoPendiente.value?.let { (uid, id) ->
+            outState.putString(ESTADO_AVISO_UID, uid)
+            outState.putString(ESTADO_AVISO_ID, id)
+        }
+        super.onSaveInstanceState(outState)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -86,7 +114,17 @@ class MainActivity : ComponentActivity() {
 
         NotificationHelper.crearCanalNotificaciones(this)
         pedirPermisoNotificaciones()
-        leerAviso(intent)
+        if (savedInstanceState == null) {
+            leerAviso(intent)
+        } else {
+            val uid = savedInstanceState.getString(ESTADO_AVISO_UID)
+            val productoId = savedInstanceState.getString(ESTADO_AVISO_ID)
+            if (!uid.isNullOrBlank() && !productoId.isNullOrBlank()) {
+                avisoPendiente.value = uid to productoId
+            }
+            // Nunca reproducir el Intent anterior durante la recreación.
+            limpiarExtrasAviso(intent)
+        }
         FirebaseAuth.getInstance().currentUser?.uid?.let { uid ->
             ProgramadorAlertas.activar(this, uid)
         }
@@ -95,7 +133,7 @@ class MainActivity : ComponentActivity() {
             ExpiryAlertTheme {
                 ExpiryAlertApp(
                     aviso = avisoPendiente.value,
-                    avisoAtendido = { avisoPendiente.value = null },
+                    avisoAtendido = { atenderAviso() },
                     activarAlertas = { uid -> ProgramadorAlertas.activar(this, uid) },
                     cerrarAlertas = { uid -> ProgramadorAlertas.desactivar(this, uid) }
                 )
