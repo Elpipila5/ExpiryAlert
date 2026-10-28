@@ -58,7 +58,9 @@ class MainActivity : ComponentActivity() {
     private fun leerAviso(origen: Intent?) {
         val uid = origen?.getStringExtra(NotificationHelper.EXTRA_USUARIO_ID)
         val id = origen?.getStringExtra(NotificationHelper.EXTRA_PRODUCTO_ID)
-        if (!uid.isNullOrBlank() && !id.isNullOrBlank()) {
+        if (!uid.isNullOrBlank() && !id.isNullOrBlank() &&
+            !AvisosAtendidos.fueAtendido(this, uid, id)
+        ) {
             avisoPendiente.value = uid to id
         }
         // Sin esto, Android vuelve a abrir el mismo diálogo al girar la pantalla.
@@ -120,7 +122,9 @@ class MainActivity : ComponentActivity() {
         } else {
             val uid = savedInstanceState.getString(ESTADO_AVISO_UID)
             val productoId = savedInstanceState.getString(ESTADO_AVISO_ID)
-            if (!uid.isNullOrBlank() && !productoId.isNullOrBlank()) {
+            if (!uid.isNullOrBlank() && !productoId.isNullOrBlank() &&
+                !AvisosAtendidos.fueAtendido(this, uid, productoId)
+            ) {
                 avisoPendiente.value = uid to productoId
             }
             // Nunca reproducir el Intent anterior durante la recreación.
@@ -190,10 +194,12 @@ fun ExpiryAlertApp(
     }
 
     aviso?.let { (uid, id) ->
-        if (FirebaseAuth.getInstance().currentUser?.uid == uid) {
-            DialogoConfirmacionCaducidad(uid, id, avisoAtendido)
-        } else {
-            LaunchedEffect(uid, id) { avisoAtendido() }
+        when {
+            FirebaseAuth.getInstance().currentUser?.uid != uid ||
+                AvisosAtendidos.fueAtendido(contextoApp, uid, id) -> {
+                LaunchedEffect(uid, id) { avisoAtendido() }
+            }
+            else -> DialogoConfirmacionCaducidad(uid, id, avisoAtendido)
         }
     }
 
@@ -2252,8 +2258,8 @@ fun DialogoConfirmacionCaducidad(
                     val confirmacionHoy = doc.getTimestamp("ultimaConfirmacion")
                         ?.toDate()?.let { FechasCaducidad.esHoy(it) } == true
                     if (confirmacionHoy) {
-                        // Si la respuesta se guardó antes de la rotación,
-                        // no volver a pedirla después de recrear la Activity.
+                        // El usuario ya respondió hoy (incluso si se recreó la Activity).
+                        AvisosAtendidos.marcarAtendido(context, uid, productoId)
                         cerrar()
                         return@addOnSuccessListener
                     }
@@ -2290,6 +2296,8 @@ fun DialogoConfirmacionCaducidad(
         }
         db.collection("productos").document(productoId).update(cambios)
             .addOnSuccessListener {
+                // Solo marcar atendido cuando Firebase confirmó el guardado.
+                AvisosAtendidos.marcarAtendido(context, uid, productoId)
                 NotificationHelper.cancelarAlerta(context, uid, productoId)
                 Toast.makeText(
                     context,
