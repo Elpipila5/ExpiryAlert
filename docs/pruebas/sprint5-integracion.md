@@ -12,7 +12,7 @@ El probador confirmó inicialmente cuatro comprobaciones aprobadas y dos pendien
 | Registrar y editar productos | Aprobado | Captura antes/después |
 | Escaneo de códigos y OCR | Aprobado | Captura del reconocimiento |
 | Aviso automático al guardar un producto con fecha próxima | **Aprobado (informado por el usuario)** | La notificación llegó sin pulsar «Revisar caducidades ahora»; falta captura |
-| Responder/archivar desde la notificación | Pendiente | Evidenciar diálogo y cambio de documento |
+| Archivar desde una notificación («Ya no lo tengo») | **Aprobado (informado por el usuario)** | El producto desaparece del inventario; falta captura de Firestore |
 | Cierre de sesión oculta notificaciones privadas | Aprobado | Captura antes/después |
 
 ### Corrección del diagnóstico (28/10/2026)
@@ -66,7 +66,7 @@ El usuario informó que al pulsar **«Ya no lo tengo»** los artículos seguían
 
 **Causa verificada en `MainActivity.kt`:** la transformación `mapNotNull` seguía devolviendo `datos` aunque `activo == false`. Al mismo tiempo, añadía `id` solo a los activos. Por tanto, los productos archivados se mostraban **sin ID**. Se corrigió utilizando `InventarioProductos.productoVisible(documento.id, documento.data)`, que devuelve `null` para archivados y asigna el ID real a todos los productos visibles. Se incluyen pruebas unitarias en `InventarioProductosTest.kt`.
 
-**Validación en Android Studio (aún no ejecutada en dispositivo para esta corrección):**
+**Validación en Android Studio (ejecutada y aprobada por el usuario en el commit `5517e5b`; conservar como regresión):**
 
 1. Hacer Git Pull en la rama `feature/sprint5-integracion-seguridad-pruebas`, Sync Gradle y Run; ejecutar `InventarioProductosTest`.
 2. Revisar si un artículo archivado antes de la corrección **ya no aparece en la lista**. Debe permanecer en Firestore con `activo=false` como historial (no se ha borrado de la base).
@@ -75,7 +75,19 @@ El usuario informó que al pulsar **«Ya no lo tengo»** los artículos seguían
 5. Crear un **tercer producto activo**, pulsar **Eliminar** y confirmar. Debe borrarse el documento de Firestore sin mostrar **«No se encontró el ID del producto»**.
 6. Verificar que los documentos de otro usuario no aparecen al cambiar de cuenta.
 
-**No marcar S5-09 aprobado hasta ejecutar esta prueba y observar el resultado real.** 
+**Resultado posterior comunicado:** el usuario instaló la corrección `5517e5b` y aprobó las tres pruebas: los archivados anteriores desaparecen, «Ya no lo tengo» retira el producto y «Eliminar» funciona con ID real. La evidencia fotográfica sigue pendiente. 
+
+### Validaciones comunicadas después de corregir el error de ID
+
+El usuario confirmó expresamente las siguientes pruebas con el commit `5517e5b` de esta rama:
+
+- **Aprobado:** productos archivados antes de la corrección ya no se muestran.
+- **Aprobado:** «Ya no lo tengo» desde la notificación retira el producto del inventario.
+- **Aprobado:** «Eliminar» un producto activo ya no da el error «No se encontró el ID».
+- **Todavía no confirmado:** «Sí, todavía lo tengo» mantiene el producto y escribe `ultimaConfirmacion`.
+- **Todavía no confirmado:** reglas del propietario publicadas y probadas en Firebase con dos cuentas.
+
+El documento de evidencia del sprint está en [`docs/evidencias/sprint-05/registro.md`](../evidencias/sprint-05/registro.md). Los resultados se basan en el reporte del usuario; conservar capturas, modelo/version Android y APK sigue siendo necesario para documentar la entrega.
 
 ## Orden de demostración sugerido (flujo extremo a extremo)
 
@@ -97,17 +109,17 @@ El usuario informó que al pulsar **«Ya no lo tengo»** los artículos seguían
 | S5-01 | Registro / login / sesión persistente | Flujo estable | No ejecutado |
 | S5-02 | Producto manual con caducidad mañana | Guardado en Firestore y listado | No ejecutado |
 | S5-03 | Edición de fecha y cantidad | Actualización visible y comprobación de alertas solicitada | No ejecutado |
-| S5-04 | Eliminar producto | Sale de inventario y se cancela aviso visible | No ejecutado |
-| S5-05 | Escanear código EAN/UPC | Autocompleta datos disponibles o permite corregir | No ejecutado |
-| S5-06 | OCR de fecha | Sugiere una fecha con confirmación obligatoria | No ejecutado |
+| S5-04 | Eliminar producto | Sale del inventario; no se presenta el error de ID | **Aprobado (informado); captura pendiente** |
+| S5-05 | Escanear código EAN/UPC | Autocompleta datos disponibles o permite corregir | **Aprobado (informado); captura pendiente** |
+| S5-06 | OCR de fecha | Sugiere una fecha con confirmación obligatoria | **Aprobado (informado); captura pendiente** |
 | S5-07 | Fecha pendiente | Guarda sin inventar fecha y no avisa hasta completar | No ejecutado |
 | S5-08 | Notificación, respuesta «todavía lo tengo» | Marca `ultimaConfirmacion` | No ejecutado |
-| S5-09 | Notificación, respuesta «ya no lo tengo» | Archiva y no aparece en productos activos | No ejecutado |
+| S5-09 | Notificación, respuesta «ya no lo tengo» | Archiva y no aparece en productos activos | **Aprobado (informado); captura pendiente** |
 | S5-10 | Sin permiso de notificaciones | CRUD sigue funcionando | No ejecutado |
 | S5-11 | Dos cuentas diferentes y reglas publicadas | No hay acceso cruzado a productos | No ejecutado |
-| S5-12 | Cierre de sesión con avisos visibles | No quedan avisos privados de la cuenta en el panel | No ejecutado |
+| S5-12 | Cierre de sesión con avisos visibles | No quedan avisos privados de la cuenta en el panel | **Aprobado (informado); captura pendiente** |
 | S5-13 | Red desactivada durante consulta externa | Error controlado y registro manual disponible | No ejecutado |
-| S5-14 | APK / Gradle | Compila e instala en dispositivo de prueba | No ejecutado |
+| S5-14 | APK / Gradle | Compila e instala en dispositivo de prueba | **Aprobado (informado); APK/captura pendiente** |
 
 ## Registro de evidencias
 
