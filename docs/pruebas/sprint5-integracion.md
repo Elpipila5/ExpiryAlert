@@ -129,6 +129,12 @@ El documento de evidencia del sprint está en [`docs/evidencias/sprint-05/regist
 
 **Estado:** corrección programada en GitHub; **pruebas en dispositivo, todavía pendientes**.
 
+### Confirmación posterior en teléfono: corrección de rotación funcionando
+
+Después de la corrección reforzada que procesa el Intent de notificación una sola vez y conserva el estado de respuesta confirmado por Firestore, el usuario informó el 28/10/2026: **«listo, ya funciona bien»**, en el contexto explícito de probar **ambas respuestas** y girar el teléfono.
+
+**Estado registrado:** validación funcional en teléfono reportada como aprobada para los botones «Sí, todavía lo tengo» y «Ya no lo tengo» y para evitar reapertura del mismo diálogo al girar. **Pendiente de evidencia:** comprobar el campo `ultimaConfirmacion` en Firestore, documentar la versión exacta instalada, capturas y validación de reglas publicadas con dos cuentas. La entrega del Sprint 5 todavía no tiene cerrada PB11.
+
 ## Orden de demostración sugerido (flujo extremo a extremo)
 
 1. Abrir ExpiryAlert e iniciar sesión con una **cuenta de prueba A**. Mostrar la lista de productos vinculada al usuario.
@@ -153,7 +159,7 @@ El documento de evidencia del sprint está en [`docs/evidencias/sprint-05/regist
 | S5-05 | Escanear código EAN/UPC | Autocompleta datos disponibles o permite corregir | **Aprobado (informado); captura pendiente** |
 | S5-06 | OCR de fecha | Sugiere una fecha con confirmación obligatoria | **Aprobado (informado); captura pendiente** |
 | S5-07 | Fecha pendiente | Guarda sin inventar fecha y no avisa hasta completar | No ejecutado |
-| S5-08 | Notificación, respuesta «todavía lo tengo» | Marca `ultimaConfirmacion` | No ejecutado |
+| S5-08 | Notificación, respuesta «todavía lo tengo» | Producto conserva presencia y se registra `ultimaConfirmacion` | **Aprobado (interfaz informada); Firestore/captura pendiente** |
 | S5-09 | Notificación, respuesta «ya no lo tengo» | Archiva y no aparece en productos activos | **Aprobado (informado); captura pendiente** |
 | S5-10 | Sin permiso de notificaciones | CRUD sigue funcionando | No ejecutado |
 | S5-11 | Dos cuentas diferentes y reglas publicadas | No hay acceso cruzado a productos | No ejecutado |
