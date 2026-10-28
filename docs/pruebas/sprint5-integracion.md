@@ -4,18 +4,20 @@
 
 ## Resultado comunicado durante la revisión del 28/10/2026
 
-El probador confirmó **cuatro comprobaciones aprobadas** y **dos pendientes**, trabajando en la rama `feature/sprint5-integracion-seguridad-pruebas`. El modelo/version Android y evidencias visuales aún no se han informado. Estas observaciones **no reemplazan** la matriz completa de aceptación que aparece más abajo.
+El probador confirmó inicialmente cuatro comprobaciones aprobadas y dos pendientes. En la prueba posterior confirmó **cinco comprobaciones aprobadas y una pendiente**, trabajando en la rama `feature/sprint5-integracion-seguridad-pruebas`. El modelo/version Android y evidencias visuales aún no se han informado. Estas observaciones **no reemplazan** la matriz completa de aceptación que aparece más abajo.
 
 | Comprobación efectivamente informada | Estado informado | Evidencia pendiente |
 | --- | --- | --- |
 | Compilación de aplicación e inicio de sesión | Aprobado | Captura del build y sesión |
 | Registrar y editar productos | Aprobado | Captura antes/después |
 | Escaneo de códigos y OCR | Aprobado | Captura del reconocimiento |
-| Guardar un producto próximo y solicitar revisión | Pendiente | Evidenciar notificación para nuevo producto |
+| Aviso automático al guardar un producto con fecha próxima | **Aprobado (informado por el usuario)** | La notificación llegó sin pulsar «Revisar caducidades ahora»; falta captura |
 | Responder/archivar desde la notificación | Pendiente | Evidenciar diálogo y cambio de documento |
 | Cierre de sesión oculta notificaciones privadas | Aprobado | Captura antes/después |
 
 ### Corrección del diagnóstico (28/10/2026)
+
+**Resultado posterior comunicado:** tras actualizar la rama y ejecutar la aplicación, el usuario confirmó que **la notificación llega sin presionar el botón de revisión**. Se da por aprobada esa comprobación comunicada, pero **NO** la confirmación ni el archivado, todavía sin prueba reportada. Tampoco se ha demostrado en esta conversación una alerta entregada de manera autónoma por WorkManager con la app completamente cerrada.
 
 Tras informar el usuario que solo aparecía **«Las alertas pueden tardar unos momentos»** y no llegaba ningún aviso, se reemplazó la comprobación manual a través de WorkManager por una consulta **inmediata** de Firestore desde la app abierta. La revisión periódica con WorkManager **se mantiene**, pero es independiente.
 
@@ -35,16 +37,16 @@ Tras informar el usuario que solo aparecía **«Las alertas pueden tardar unos m
 
 No se afirma que WorkManager ejecute a una hora exacta: Android puede retrasar sus tareas. No se consideran finalizados los casos hasta observar que las notificaciones se muestran y la confirmación/archivado persiste.
 
-### Guía específica para ejecutar las dos pruebas pendientes
+### Prueba final pendiente: confirmar o archivar desde una notificación
 
 > **Importante:** `ProgramadorAlertas.revisarAhora()` solicita la tarea a WorkManager; no garantiza ejecutarla al instante. Un producto ya notificado hoy tampoco generará un segundo aviso el mismo día. Usar **productos nuevos** para cada intento.
 
-**Caso A — comprobar una alerta real del producto recién creado**
+**Caso A — alerta real del producto recién creado (ya observada por el usuario; conservar como regresión)**
 
 1. Confirmar sesión iniciada, conectividad y notificaciones habilitadas en Android; revisar también el canal **Alertas de caducidad**.
 2. Crear un producto manual de prueba con nombre distintivo, cantidad mayor a 0 y caducidad mañana (ejemplo para 28/10/2026: **29/10/2026**). No dejar fecha vacía.
-3. Guardarlo y confirmar que aparece en el inventario. El código pide revisión por WorkManager cuando el guardado tiene éxito.
-4. Volver a pantalla principal y pulsar **🔔 Revisar caducidades ahora** como comprobación adicional.
+3. Guardarlo y confirmar que aparece en el inventario. Con la corrección de Sprint 5, el código solicita una revisión directa de Firestore con la app abierta; WorkManager mantiene la revisión periódica independiente.
+4. No es necesario pulsar **🔔 Revisar caducidades ahora** si la notificación ya llegó automáticamente. El botón permanece para diagnósticos y demostraciones.
 5. Dar oportunidad al sistema de ejecutar la tarea. Si aparece **Alerta de caducidad**, registrar captura y aprobar el caso; no exigir que el aviso sea inmediato.
 
 **Caso B — verificar las dos respuestas (usar dos productos distintos)**
