@@ -51,7 +51,8 @@ Después de reportar que al girar el teléfono reaparecía el diálogo con **amb
 | Productos archivados antes de corregir | Dejan de mostrarse | Aprobado (informado) | Captura inventario actualizado |
 | Eliminar producto activo | No aparece error de ID; se elimina | Aprobado (informado) | Captura antes/después |
 | Conservar producto desde notificación | El usuario confirmó que las respuestas funcionan tras corregir la rotación | Aprobado (informado, funcionamiento visual); verificación de `ultimaConfirmacion` pendiente | Captura de producto visible y campo `ultimaConfirmacion` |
-| Acceso entre dos cuentas con reglas publicadas | No confirmado | Pendiente | Pruebas de acceso permitidas/denegadas |
+| Separación visual de inventarios entre cuentas | El usuario confirmó «cada quien tiene sus propios productos» | Aprobado (informado, en interfaz) | Capturas de inventarios con cuentas de prueba A/B, sin datos personales |
+| Denegación de acceso cruzado mediante reglas publicadas | No confirmado con simulador ni reglas de servidor | Pendiente | Pruebas de acceso permitido y denegado en Firebase Rules Playground |
 | Notificación periódica con app totalmente cerrada | No confirmado | Pendiente (opcional en demo; documentar comportamiento) | Evidencia de WorkManager, sin garantía de horario exacto |
 
 ## Sprint Review
