@@ -107,6 +107,28 @@ El documento de evidencia del sprint está en [`docs/evidencias/sprint-05/regist
 
 **Estado:** incidencias corregidas en código, pendientes de volver a probar en el dispositivo y en Firebase. No aprobar la confirmación de producto solo porque el diálogo se cierra.
 
+### Segunda incidencia reportada desde el teléfono: ambas respuestas reaparecían al rotar
+
+**Observación adicional del usuario (28/10/2026):** las capturas eran del dispositivo real y el diálogo reaparecía tras girar, tanto al responder «Sí, todavía lo tengo» como «Ya no lo tengo». Una de las capturas mostraba `PERMISSION_DENIED` después de la rotación. No se da por aprobada la corrección en Android solo por haberla subido a GitHub.
+
+**Corrección reforzada (siguiente compilación de pruebas `1.0.1-sprint5` / versionCode 2):**
+- Se consume el `Intent` de notificación y solo se restaura el aviso **pendiente** en `onSaveInstanceState`.
+- Después de que Firestore acepta una respuesta, se registra en `AvisosAtendidos` que ese aviso fue atendido. La comprobación evita abrirlo desde el `Intent` anterior o al restaurar Activity.
+- Una **alerta nueva** del mismo producto limpia la marca anterior y puede volver a contestarse.
+- Si Firestore **rechaza la actualización**, la app no marca falsamente la confirmación como correcta.
+- Si al releer ya existe `ultimaConfirmacion` de hoy, el diálogo se cierra sin volver a solicitar una respuesta.
+- El proyecto incluye `AvisosAtendidosInstrumentedTest` (pendiente de ejecutar en un teléfono/emulador).
+
+**Comprobación para el cierre:**
+1. En la rama `feature/sprint5-integracion-seguridad-pruebas`, ejecutar `git pull --ff-only origin feature/sprint5-integracion-seguridad-pruebas`; sincronizar Gradle, Rebuild y Run en el teléfono.
+2. Verificar que la versión instalada sea **1.0.1-sprint5**, no `1.0`. No borrar datos ni desinstalar la app.
+3. Crear un producto NUEVO con caducidad dentro de 7 días; tocar la notificación, pulsar «Sí, todavía lo tengo» y esperar a ver **Producto confirmado**.
+4. Rotar la pantalla. **Esperado:** el diálogo no reaparece; el producto permanece en inventario y `ultimaConfirmacion` existe en su documento de Firestore.
+5. Crear otro producto NUEVO, contestar «Ya no lo tengo» y esperar **Producto archivado**. Rotar: no debe reaparecer; inventario no debe mostrarlo y Firestore debe registrar `activo=false` y `cantidad=0`.
+6. Si aparece `PERMISSION_DENIED` en la **primera lectura o al guardar**, no intentar resolverlo abriendo reglas a todos: inspeccionar las reglas **publicadas** de Firebase y `usuarioId` del documento. Documentar el caso y no considerar aprobada la acción sin mensaje de éxito.
+
+**Estado:** corrección programada en GitHub; **pruebas en dispositivo, todavía pendientes**.
+
 ## Orden de demostración sugerido (flujo extremo a extremo)
 
 1. Abrir ExpiryAlert e iniciar sesión con una **cuenta de prueba A**. Mostrar la lista de productos vinculada al usuario.
