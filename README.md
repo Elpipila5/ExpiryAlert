@@ -6,6 +6,13 @@ Permite controlar la caducidad y las cantidades de un inventario personal. El pr
 
 **Estado del repositorio (Sprint 5):** contiene una aplicación Android nativa en Kotlin y Jetpack Compose con Firebase Auth/Firestore, inventario, registro manual, OCR y código de barras, y alertas de caducidad. Las funcionalidades y la seguridad deben comprobarse en Android Studio y Firebase antes de declararse terminadas. Ver [matriz del Sprint 5](docs/pruebas/sprint5-integracion.md).
 
+## Recetas (PB10 / Sprint 7)
+
+La rama de desarrollo `feature/recetas-ia` incorpora una pantalla de recetas con sugerencias a partir de productos activos, indicación de ingredientes faltantes y enlaces de búsqueda en YouTube. La IA del compañero se integra mediante un backend HTTPS con autenticación Firebase; **necesita despliegue y credenciales privadas del servidor, no incluidos**. Sin ese servicio, las sugerencias locales siguen disponibles.
+
+- [Guía del backend y configuración de IA](backend/README.md)
+- [Pruebas F10 del Sprint 7](docs/pruebas/sprint7-recetas.md)
+
 ## Empieza aquí
 
 1. Consulta las [tareas abiertas](https://github.com/Elpipila5/ExpiryAlert/issues) y toma una tarea pequeña.
