@@ -10,6 +10,7 @@ Código real del proyecto móvil, escrito en **Kotlin**, con interfaz **Jetpack 
 - `CapturaOCRProducto.kt` y `ExtractorDatosOCR.kt`: fotografía y lectura de fecha/cantidad.
 - `EscanerCodigoProducto.kt` y `ConsultaProductoCodigo.kt`: lector EAN/UPC y búsqueda de producto en Open Food Facts.
 - `build.gradle.kts`: dependencias Firebase, Compose, ML Kit y WorkManager.
+- `RecetasScreen.kt`, `RecetasLocales.kt` y `RecetasIACliente.kt`: pantalla F10, recetas locales/YouTube y cliente IA protegido con Firebase. El backend vive en `../backend/` y la IA exige una URL HTTPS real.
 - `src/test/`: pruebas unitarias; `src/androidTest/`: pruebas instrumentadas de referencia.
 
 ## Abrir, ejecutar y entregar
