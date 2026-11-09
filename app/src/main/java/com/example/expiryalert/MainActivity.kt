@@ -247,6 +247,9 @@ fun ExpiryAlertApp(
                 agregarProducto = {
                     pantalla = "agregarProducto"
                 },
+                verRecetas = {
+                    pantalla = "recetas"
+                },
                 editarProducto = { producto ->
                     productoEditar = producto
                     pantalla = "editarProducto"
@@ -261,6 +264,10 @@ fun ExpiryAlertApp(
                     avisoAtendido()
                     pantalla = "inicio"
                 }
+            )
+
+            "recetas" -> RecetasScreen(
+                onVolver = { pantalla = "principal" }
             )
 
             "agregarProducto" -> PantallaAgregarProducto(
@@ -829,6 +836,7 @@ fun PantallaRegistro(
 @Composable
 fun PantallaPrincipal(
     agregarProducto: () -> Unit,
+    verRecetas: () -> Unit,
     editarProducto: (Map<String, Any>) -> Unit,
     cerrarSesion: () -> Unit
 ) {
@@ -1161,6 +1169,22 @@ fun PantallaPrincipal(
                 fontSize = 14.sp,
                 modifier = Modifier.fillMaxWidth()
             )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Button(
+            onClick = verRecetas,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(55.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF2E7D32),
+                contentColor = Color.White
+            ),
+            shape = RoundedCornerShape(15.dp)
+        ) {
+            Text("🍳 Recetas con mis productos", fontSize = 17.sp, fontWeight = FontWeight.Bold)
         }
 
         Spacer(modifier = Modifier.height(12.dp))
