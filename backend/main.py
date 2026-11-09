@@ -31,7 +31,7 @@ class Receta(BaseModel):
 
 
 class Resultado(BaseModel):
-    recetas: list[Receta] = Field(min_length=1, max_length=3)
+    recetas: list[Receta] = Field(min_length=3, max_length=3)
 
 
 def obtener_firestore():
@@ -144,7 +144,7 @@ def generar_recetas(authorization: str | None = Header(default=None)):
         "indica que deben comprobarse antes de usar. "
         "Evita consejos culinarios que impliquen consumir alimentos descompuestos. "
         "La advertencia de cada receta debe mencionar revisar estado, conservación y cocción adecuada. "
-        "Devuelve un objeto JSON con la propiedad recetas (un arreglo de hasta tres recetas)."
+        "Devuelve un objeto JSON con la propiedad recetas (un arreglo de exactamente tres recetas)."
     )
     payload = {
         "model": os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
