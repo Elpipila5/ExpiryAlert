@@ -18,7 +18,6 @@ data class RecetaLocal(
 )
 
 object RecetasLocales {
-    private data class Ingrediente(val nombre: String, val palabras: List<String>)
     private data class Plantilla(
         val nombre: String,
         val tiempo: Int,
@@ -38,7 +37,7 @@ object RecetasLocales {
         "queso" to listOf("queso"),
         "lechuga" to listOf("lechuga"),
         "pepino" to listOf("pepino"),
-        "pan" to listOf("pan ", "pan de", "bolillo"),
+        "pan" to listOf("pan", "bolillo"),
         "pasta" to listOf("pasta", "espagueti", "spaghetti", "fideo"),
         "papa" to listOf("papa", "patata"),
         "avena" to listOf("avena"),
