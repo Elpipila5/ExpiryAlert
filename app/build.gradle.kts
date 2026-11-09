@@ -4,6 +4,14 @@ plugins {
     id("com.google.gms.google-services")
 }
 
+// La URL no es secreta. Configúrala en ~/.gradle/gradle.properties o -P.
+val recetasApiUrl = providers.gradleProperty("RECETAS_API_BASE_URL")
+    .orElse("").get().trim().trimEnd('/')
+require(recetasApiUrl.isEmpty() || (
+    recetasApiUrl.startsWith("https://") &&
+        !recetasApiUrl.contains('"') && !recetasApiUrl.contains('\\')
+)) { "RECETAS_API_BASE_URL debe ser HTTPS y no contener comillas ni barras inversas." }
+
 android {
     namespace = "com.example.expiryalert"
     compileSdk {
@@ -14,8 +22,11 @@ android {
         applicationId = "com.example.expiryalert"
         minSdk = 24
         targetSdk = 37
-        versionCode = 2
-        versionName = "1.0.1-sprint5"
+        versionCode = 3
+        versionName = "1.1.0-recetas"
+
+        // La clave de OpenAI permanece solo en el backend.
+        buildConfigField("String", "RECETAS_API_BASE_URL", "\"$recetasApiUrl\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -33,6 +44,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
