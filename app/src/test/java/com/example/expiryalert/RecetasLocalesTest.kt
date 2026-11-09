@@ -4,11 +4,19 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.Calendar
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 class RecetasLocalesTest {
+    private fun fechaEn(dias: Int): String {
+        val calendario = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, dias) }
+        return SimpleDateFormat("dd/MM/yyyy", Locale.ROOT).format(calendario.time)
+    }
+
     private fun producto(
         nombre: String,
-        fecha: String = "30/11/2026",
+        fecha: String = fechaEn(21),
         cantidad: Double = 1.0,
         activo: Boolean = true
     ): Map<String, Any> = mapOf(
@@ -38,7 +46,7 @@ class RecetasLocalesTest {
     @Test
     fun priorizaIngredienteCercanoACaducar() {
         val recetas = RecetasLocales.recomendar(
-            listOf(producto("Tomate", "10/11/2026"), producto("Huevo", "15/11/2026"))
+            listOf(producto("Tomate", fechaEn(1)), producto("Huevo", fechaEn(6)))
         )
         // No asumir el reloj de prueba; al menos se sugieren recetas con huevo/tomate.
         assertTrue(recetas.any { it.nombre == "Huevos con tomate" })
