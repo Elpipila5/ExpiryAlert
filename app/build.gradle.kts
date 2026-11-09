@@ -14,8 +14,17 @@ android {
         applicationId = "com.example.expiryalert"
         minSdk = 24
         targetSdk = 37
-        versionCode = 2
-        versionName = "1.0.1-sprint5"
+        versionCode = 3
+        versionName = "1.1.0-recetas"
+
+        // URL pública HTTPS; NUNCA una clave de OpenAI.
+        buildConfigField(
+            "String",
+            "RECETAS_API_BASE_URL",
+            "\\"" + providers.gradleProperty("RECETAS_API_BASE_URL")
+                .orElse("").get().trimEnd('/').replace("\\", "\\\\")
+                .replace("\\"", "\\\"") + "\\""
+        )
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -33,6 +42,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
