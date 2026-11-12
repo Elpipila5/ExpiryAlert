@@ -8,10 +8,10 @@ Permite controlar la caducidad y las cantidades de un inventario personal. El pr
 
 ## Recetas (PB10 / Sprint 7)
 
-La rama de desarrollo `feature/recetas-ia` incorpora una pantalla de recetas con sugerencias a partir de productos activos, indicación de ingredientes faltantes y enlaces de búsqueda en YouTube. La IA del compañero se integra mediante un backend HTTPS con autenticación Firebase; **necesita despliegue y credenciales privadas del servidor, no incluidos**. Sin ese servicio, las sugerencias locales siguen disponibles.
+La rama `feature/recetas-inventario-desde-cero` **reconstruye el sistema de recetas para que funcione sin IA**. Calcula cuáles de las 28 recetas se pueden preparar con los productos del usuario, muestra qué ingredientes faltan para las recetas incompletas, y cuando el inventario está vacío enseña recetas junto con la lista completa de compras. Incluye pasos, copiado de faltantes y búsquedas en YouTube. Los productos vencidos, archivados o agotados se excluyen. El backend IA previo se conserva como material opcional y ya **no se usa en la pantalla**.
 
-- [Guía del backend y configuración de IA](backend/README.md)
-- [Pruebas F10 del Sprint 7](docs/pruebas/sprint7-recetas.md)
+- [Pruebas F10 del Sprint 7: inventario completo, parcial y vacío](docs/pruebas/sprint7-recetas.md)
+- [Backend IA opcional no conectado a esta interfaz](backend/README.md)
 
 ## Empieza aquí
 
