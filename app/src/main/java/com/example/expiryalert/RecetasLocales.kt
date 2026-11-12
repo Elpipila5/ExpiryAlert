@@ -176,8 +176,11 @@ object RecetasLocales {
             if (nombre.isBlank()) return@mapNotNull null
 
             val fecha = dato["fechaCaducidad"]?.toString()?.trim().orEmpty()
-            val dias = if (fecha.isBlank()) null else
+            val dias = if (fecha.isBlank()) {
+                null
+            } else {
                 FechasCaducidad.diasRestantes(fecha, hoy) ?: return@mapNotNull null
+            }
             if (dias != null && dias < 0) return@mapNotNull null
 
             Producto(nombre, normalizar(nombre), dias)
