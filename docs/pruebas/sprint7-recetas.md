@@ -1,41 +1,50 @@
-# Sprint 7 — PB10/F10: recetas según el inventario
+# Sprint 7 — PB10 / F10: recetas según productos reales del inventario
 
-**Cronograma:** 9 al 13 de noviembre de 2026. Este PR entrega PB10. PB08 (bajo stock y lista de compras) se trabaja por separado.
+**Semana:** 9–13 de noviembre de 2026.  
+**Rama para probar:** `feature/recetas-inventario-desde-cero`.  
+**Versión Android:** `1.1.1-recetas` (versionCode 4).
 
-**Estado:** cambios preparados; pruebas de Android Studio y servidor IA real pendientes.
+**Esta implementación reemplaza el sistema de recetas anterior.** Los resultados se calculan localmente a partir de los productos de Firestore; no necesita IA, OpenAI, backend Python ni claves externas. El backend anterior se conserva en el repositorio solo como una opción para otro desarrollo, pero no participa en esta pantalla.
 
-## Pruebas en Android Studio sin servidor IA
+## Comportamiento exigido
 
-| Caso | Acción | Resultado esperado |
+- **Receta completa:** si todos los ingredientes aparecen en el inventario con cantidad > 0, activos y no vencidos, mostrar «✅ Puedes preparar estas recetas».
+- **Receta incompleta:** si tiene al menos un ingrediente y falta algún otro, mostrar el nombre de la receta, «✅ Tienes» y «🛒 Te falta comprar», más botón para copiar faltantes.
+- **Sin inventario o sin coincidencias:** mostrar exactamente «No hay ninguna receta que puedas hacer con los productos que tienes actualmente.» y a continuación **recetas para las que necesitas comprar ingredientes**, con sus listas completas. No debe quedarse la pantalla en blanco.
+- **Productos vencidos:** no contar como ingredientes utilizables ni recomendar su consumo.
+- **Productos archivados / cantidad 0:** no contar.
+- **Fecha vacía:** permite sugerencia con advertencia explícita «Comprueba la fecha», sin tratarla automáticamente como producto seguro.
+- **Vista de recetas:** botón «Ver cómo prepararla» y enlace a resultados de búsqueda de YouTube.
+- **Usuario:** la consulta Firestore usa `whereEqualTo("usuarioId", uid)` y solo los documentos de la cuenta autenticada.
+
+## Pruebas en Android Studio
+
+| ID | Datos de prueba | Resultado esperado |
 | --- | --- | --- |
-| R01 | Iniciar sesión, pulsar «🍳 Recetas con mis productos» | Abre pantalla y permite regresar |
-| R02 | Registrar tomate y huevo con cantidad positiva | Sugiere «Huevos con tomate» y muestra faltantes |
-| R03 | Registrar ingrediente vencido | No aparece entre ingredientes aprovechables |
-| R04 | Archivar producto o dejar cantidad 0 | Ya no cuenta para sugerencias |
-| R05 | Registrar producto sin fecha | Muestra advertencia para comprobar caducidad antes de usar |
-| R06 | Pulsar «Buscar preparación en YouTube» | Abre resultados de búsqueda HTTPS |
-| R07 | Iniciar sesión como cuentas distintas | Cada una usa únicamente sus productos |
-| R08 | Sin conexión | Se pueden usar datos locales en caché cuando Firebase disponga de ellos; error visible si no hay acceso |
-| R09 | IA sin backend HTTPS | Botón desactivado y recetas locales disponibles |
-| R10 | Ejecutar pruebas unitarias | `RecetasLocalesTest` termina sin errores |
+| RC01 | Cuenta nueva sin ningún producto | Aviso «No hay ninguna receta que puedas hacer…» y varias recetas con listas de compra completas |
+| RC02 | Solo `Tortillas de maíz` (cantidad 1) | «Quesadillas de queso» en incompletas: Tienes tortilla; falta queso |
+| RC03 | `Tortillas de maíz` + `Queso manchego`, ambas con cantidad > 0 | «Quesadillas de queso» en completas; ningún ingrediente faltante |
+| RC04 | `Huevo` únicamente | «Huevos cocidos» en completas; otras como «Huevos con tomate» aparecen con faltantes |
+| RC05 | `Leche entera` con fecha vacía | Recetas con leche muestran «Comprueba la fecha» y el ingrediente que falte |
+| RC06 | Tomate con fecha de ayer | No cuenta como disponible; no se consume ni cambia automáticamente |
+| RC07 | Tortillas con `activo=false` | No cuenta para ninguna receta |
+| RC08 | Queso con cantidad = 0 | No cuenta como ingrediente |
+| RC09 | Cambiar cantidad o eliminar producto mientras está abierta la pantalla | Listas de recetas se actualizan con el listener Firestore |
+| RC10 | Pulsar «📋 Copiar lo que me falta» | Portapapeles contiene únicamente los nombres faltantes de esa receta |
+| RC11 | Pulsar «▶ Buscar preparación en YouTube» | Abre una búsqueda HTTPS de la receta |
+| RC12 | Cerrar sesión A y entrar B | B solo usa su propio inventario |
+| RC13 | Desactivar internet y no tener datos Firestore cacheados | Error de carga visible y catálogo de ideas de compras; no afirmar que se conoce inventario |
+| RC14 | Ejecutar pruebas `RecetasLocalesTest` | Casos completos, parciales, vacíos, sinónimos y fechas sin fallos |
+| RC15 | Regresar a la pantalla principal | Inventario, alertas, login y CRUD existentes siguen funcionando |
 
-## Pruebas del servicio IA (necesita claves y despliegue)
+## Pasos rápidos para mostrar al docente
 
-| Caso | Acción | Resultado |
-| --- | --- | --- |
-| IA01 | `GET /salud` | HTTP 200, `estado=ok` |
-| IA02 | `POST /recetas/ia` sin token | HTTP 401 |
-| IA03 | Token Firebase falso | HTTP 401 |
-| IA04 | Token de cuenta A | Solo obtiene productos con `usuarioId=A` |
-| IA05 | Productos vencidos, archivados, agotados | Se descartan antes de enviar datos a IA |
-| IA06 | Sin ingredientes utilizables | HTTP 400 |
-| IA07 | Sin clave del proveedor | HTTP 503 |
-| IA08 | Sesión, inventario, clave y cuota válidos | JSON con recetas e ingredientes/faltantes/pasos |
-| IA09 | Error de red o servicio | Error legible, sin bloqueo de sugerencias locales |
-| IA10 | Peticiones consecutivas | HTTP 429 por límite de desarrollo |
+1. Registrar en la cuenta de prueba solo `Tortillas de maíz` y entrar a Recetas: mostrar la quesadilla y el queso faltante.
+2. Registrar `Queso manchego` y volver: ahora debe aparecer entre las que sí se pueden preparar.
+3. Archivarlas o usar una cuenta vacía: comprobar que siempre hay ideas de recetas, pero ninguna marcada como preparable.
+4. Abrir «Ver cómo prepararla» y copiar los faltantes.
+5. Tomar capturas de los tres estados, del build y de las pruebas unitarias.
 
-## Evidencias para entregar
+## Limitaciones explicadas
 
-Guardar el commit/APK probado, capturas de pantalla de recetas, ingredientes faltantes y YouTube. Ejecutar `:app:testDebugUnitTest` y `python -m unittest test_seleccion.py`; si se activa IA, agregar capturas con HTTP 401 sin token y 200 con cuenta de prueba. No mostrar JWT, correos reales, claves de OpenAI, ni claves de servicio Firebase.
-
-Las recetas son sugerencias; verificar fechas, conservación y cocción real de los alimentos.
+El sistema usa un catálogo local de 28 recetas y sinónimos comunes. Detecta presencia por nombre y cantidad positiva, pero **no comprueba que haya suficiente cantidad para todas las porciones**. Para alimentos sin fecha, se requiere verificar seguridad de consumo. No se descuenta automáticamente nada del inventario por consultar una receta. Los enlaces YouTube abren búsquedas, no vídeos verificados individualmente.
