@@ -5,67 +5,135 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Calendar
-import java.text.SimpleDateFormat
-import java.util.Locale
 
+/**
+ * Las pruebas fijan el calendario para no depender del día en que se ejecutan.
+ * Cubren el comportamiento solicitado con inventario lleno, parcial o vacío.
+ */
 class RecetasLocalesTest {
-    private fun fechaEn(dias: Int): String {
-        val calendario = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, dias) }
-        return SimpleDateFormat("dd/MM/yyyy", Locale.ROOT).format(calendario.time)
+
+    private val hoy = Calendar.getInstance().apply {
+        clear()
+        set(2026, Calendar.NOVEMBER, 12, 12, 0)
     }
 
     private fun producto(
         nombre: String,
-        fecha: String = fechaEn(21),
-        cantidad: Double = 1.0,
+        cantidad: Any = 1.0,
+        fecha: String = "30/11/2026",
         activo: Boolean = true
     ): Map<String, Any> = mapOf(
-        "nombre" to nombre, "cantidad" to cantidad,
-        "fechaCaducidad" to fecha, "activo" to activo
+        "nombre" to nombre,
+        "cantidad" to cantidad,
+        "fechaCaducidad" to fecha,
+        "activo" to activo
     )
 
-    @Test
-    fun rechazaProductoVencido() {
-        val recetas = RecetasLocales.recomendar(
-            listOf(producto("Tomate", "01/01/2020"))
-        )
-        assertTrue(recetas.isEmpty())
+    @Test fun sinInventarioMuestraRecetasYTodoLoQueHayQueComprar() {
+        val resultado = RecetasLocales.analizar(emptyList(), hoy)
+        assertTrue(resultado.preparables.isEmpty())
+        assertTrue(resultado.requierenCompras.isEmpty())
+        assertTrue(resultado.otrasIdeas.isNotEmpty())
+        val quesadillas = resultado.otrasIdeas.first { it.nombre == "Quesadillas de queso" }
+        assertEquals(listOf("tortilla", "queso"), quesadillas.faltantes)
+        assertEquals(0, quesadillas.porcentajeDisponible)
     }
 
-    @Test
-    fun rechazaArchivadoYAgotado() {
-        val recetas = RecetasLocales.recomendar(
+    @Test fun conUnaTortillaSugiereQuesadillaIndicandoQuesoFaltante() {
+        val resultado = RecetasLocales.analizar(listOf(producto("Tortillas de maíz")), hoy)
+        val quesadilla = resultado.requierenCompras.first { it.nombre == "Quesadillas de queso" }
+        assertEquals(listOf("tortilla"), quesadilla.disponibles)
+        assertEquals(listOf("queso"), quesadilla.faltantes)
+        assertFalse(quesadilla.puedePrepararse)
+    }
+
+    @Test fun conTortillasYQuesoSePuedePrepararQuesadilla() {
+        val resultado = RecetasLocales.analizar(
+            listOf(producto("Tortillas de harina"), producto("Queso manchego")),
+            hoy
+        )
+        val quesadilla = resultado.preparables.first { it.nombre == "Quesadillas de queso" }
+        assertTrue(quesadilla.faltantes.isEmpty())
+        assertTrue(quesadilla.puedePrepararse)
+        assertEquals(100, quesadilla.porcentajeDisponible)
+    }
+
+    @Test fun unSoloHuevoPermiteHuevosCocidosYOtrasRecetasConFaltantes() {
+        val resultado = RecetasLocales.analizar(listOf(producto("Huevos blancos")), hoy)
+        assertTrue(resultado.preparables.any { it.nombre == "Huevos cocidos" })
+        val mexicana = resultado.requierenCompras.first { it.nombre == "Huevos a la mexicana" }
+        assertTrue(mexicana.disponibles.contains("huevo"))
+        assertTrue(mexicana.faltantes.contains("tomate"))
+    }
+
+    @Test fun vencidosArchivadosYAgotadosNoCuentanComoDisponibles() {
+        val resultado = RecetasLocales.analizar(
             listOf(
-                producto("Huevo", activo = false),
-                producto("Tomate", cantidad = 0.0)
-            )
+                producto("Queso", fecha = "11/11/2026"),
+                producto("Tortillas", activo = false),
+                producto("Huevos", cantidad = 0.0)
+            ), hoy
         )
-        assertTrue(recetas.isEmpty())
+        assertEquals(0, resultado.productosAptos)
+        assertTrue(resultado.preparables.isEmpty())
+        assertTrue(resultado.otrasIdeas.isNotEmpty())
     }
 
-    @Test
-    fun priorizaIngredienteCercanoACaducar() {
-        val recetas = RecetasLocales.recomendar(
-            listOf(producto("Tomate", fechaEn(1)), producto("Huevo", fechaEn(6)))
+    @Test fun productosSinFechaNoSeOcultanPeroSeAdvierten() {
+        val resultado = RecetasLocales.analizar(
+            listOf(producto("Leche entera", fecha = "")), hoy
         )
-        // No asumir el reloj de prueba; al menos se sugieren recetas con huevo/tomate.
-        assertTrue(recetas.any { it.nombre == "Huevos con tomate" })
+        val licuado = resultado.requierenCompras.first { it.nombre == "Licuado de plátano" }
+        assertTrue(licuado.sinFechaVerificada.contains("Leche entera"))
+        assertTrue(licuado.faltantes.contains("plátano"))
     }
 
-    @Test
-    fun ingredientesAusentesSonExplicitamenteFaltantes() {
-        val recetas = RecetasLocales.recomendar(listOf(producto("Tortillas")))
-        val quesadillas = recetas.first { it.nombre == "Quesadillas" }
-        assertTrue(quesadillas.disponibles.contains("tortilla"))
-        assertTrue(quesadillas.faltantes.contains("queso"))
+    @Test fun fechaInvalidaEsExcluida() {
+        val resultado = RecetasLocales.analizar(
+            listOf(producto("Yogur", fecha = "31/02/2026")), hoy
+        )
+        assertEquals(0, resultado.productosAptos)
+        assertTrue(resultado.preparables.isEmpty())
     }
 
-    @Test
-    fun fechaSinVerificarQuedaAdvertida() {
-        val recetas = RecetasLocales.recomendar(
-            listOf(producto("Leche entera", fecha = ""))
+    @Test fun proximosACaducarSePriorizanEnLasRecetasCompletas() {
+        val resultado = RecetasLocales.analizar(
+            listOf(
+                producto("Queso", fecha = "13/11/2026"),
+                producto("Tortillas", fecha = "14/11/2026"),
+                producto("Pan integral", fecha = "30/11/2026")
+            ), hoy
         )
-        assertFalse(recetas.isEmpty())
-        assertTrue(recetas.any { it.sinFechaVerificada.contains("Leche entera") })
+        val quesadillas = resultado.preparables.first { it.nombre == "Quesadillas de queso" }
+        assertTrue(quesadillas.proximosACaducar.contains("Queso"))
+        assertTrue(quesadillas.proximosACaducar.contains("Tortillas"))
+    }
+
+    @Test fun quesoPanelaNoCuentaComoPan() {
+        val resultado = RecetasLocales.analizar(listOf(producto("Queso panela")), hoy)
+        val sandwich = resultado.requierenCompras.first { it.nombre == "Sándwich de queso" }
+        assertEquals(listOf("queso"), sandwich.disponibles)
+        assertEquals(listOf("pan"), sandwich.faltantes)
+    }
+
+    @Test fun cantidadesEnterasDecimalesYEnTextoSonCompatibles() {
+        val resultado = RecetasLocales.analizar(
+            listOf(
+                producto("Huevos", cantidad = 6L),
+                producto("Tortillas", cantidad = 2.5),
+                producto("Queso", cantidad = "1,5")
+            ), hoy
+        )
+        assertEquals(3, resultado.productosAptos)
+        assertTrue(resultado.preparables.any { it.nombre == "Quesadillas de queso" })
+    }
+
+    @Test fun siempreHayIdeasInclusoSiNingunNombreCoincide() {
+        val resultado = RecetasLocales.analizar(
+            listOf(producto("Producto desconocido", cantidad = 2)), hoy
+        )
+        assertTrue(resultado.preparables.isEmpty())
+        assertTrue(resultado.requierenCompras.isEmpty())
+        assertTrue(resultado.otrasIdeas.size >= 10)
     }
 }
