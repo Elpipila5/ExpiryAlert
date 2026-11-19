@@ -1,20 +1,23 @@
 package com.example.expiryalert
 
 import android.Manifest
+import android.app.DatePickerDialog
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
-import androidx.activity.result.contract.ActivityResultContracts
-
-import android.app.DatePickerDialog
 import android.os.Bundle
-import android.content.Intent
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -22,287 +25,332 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.expiryalert.ui.theme.ExpiryAlertTheme
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
-import java.util.concurrent.TimeUnit
+
+typealias ProductoMapa = Map<String, Any>
+
+private fun mapaVacio(): ProductoMapa = emptyMap()
+private fun listaProductosVacia(): List<ProductoMapa> = emptyList()
+
+// ----------------------------------------------------
+// PALETA MINIMALISTA Y ELEGANTE
+// ----------------------------------------------------
+private val BgPrimary = Color(0xFFFAFAFA)       // Blanco hueso muy sutil
+private val SurfaceCard = Color(0xFFFFFFFF)     // Blanco puro
+private val SurfaceMuted = Color(0xFFF4F4F5)    // Gris tenue para inputs y píldoras
+private val BorderSubtle = Color(0xFFE4E4E7)    // Borde fino elegante
+private val TextPrimary = Color(0xFF18181B)     // Negro carbón suave
+private val TextSecondary = Color(0xFF71717A)   // Gris neutro para subtítulos
+private val AccentDark = Color(0xFF18181B)      // Botón principal minimalista
+private val AccentSage = Color(0xFF0F766E)      // Verde salvia profundo (Recetas / Seguro)
+
+private val StatusSafe = Color(0xFF15803D)
+private val StatusSafeBg = Color(0xFFF0FDF4)
+private val StatusWarn = Color(0xFFB45309)
+private val StatusWarnBg = Color(0xFFFFFBEB)
+private val StatusDanger = Color(0xFFB91C1C)
+private val StatusDangerBg = Color(0xFFFEF2F2)
 
 class MainActivity : ComponentActivity() {
 
-    companion object {
-        private const val ESTADO_AVISO_UID = "expiry_aviso_uid"
-        private const val ESTADO_AVISO_ID = "expiry_aviso_id"
+  companion object {
+    private const val ESTADO_AVISO_UID = "expiry_aviso_uid"
+    private const val ESTADO_AVISO_ID = "expiry_aviso_id"
+  }
+
+  private var avisoUid by mutableStateOf("")
+  private var avisoProductoId by mutableStateOf("")
+
+  private fun limpiarExtrasAviso(origen: Intent?) {
+    origen?.removeExtra(NotificationHelper.EXTRA_USUARIO_ID)
+    origen?.removeExtra(NotificationHelper.EXTRA_PRODUCTO_ID)
+  }
+
+  private fun leerAviso(origen: Intent?) {
+    val uid = origen?.getStringExtra(NotificationHelper.EXTRA_USUARIO_ID).orEmpty()
+    val id = origen?.getStringExtra(NotificationHelper.EXTRA_PRODUCTO_ID).orEmpty()
+    if (uid.isNotBlank() && id.isNotBlank() && !AvisosAtendidos.fueAtendido(this, uid, id)) {
+      avisoUid = uid
+      avisoProductoId = id
+    }
+    limpiarExtrasAviso(origen)
+  }
+
+  private fun atenderAviso() {
+    avisoUid = ""
+    avisoProductoId = ""
+    limpiarExtrasAviso(intent)
+  }
+
+  override fun onSaveInstanceState(outState: Bundle) {
+    if (avisoUid.isNotBlank() && avisoProductoId.isNotBlank()) {
+      outState.putString(ESTADO_AVISO_UID, avisoUid)
+      outState.putString(ESTADO_AVISO_ID, avisoProductoId)
+    }
+    super.onSaveInstanceState(outState)
+  }
+
+  override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    setIntent(intent)
+    leerAviso(intent)
+  }
+
+  private val solicitarPermisoNotificaciones =
+    registerForActivityResult(ActivityResultContracts.RequestPermission()) { concedido ->
+      if (concedido) {
+        Toast.makeText(this, "Notificaciones activadas", Toast.LENGTH_SHORT).show()
+        NotificationHelper.mostrarNotificacionPrueba(this)
+      } else {
+        Toast.makeText(this, "Permiso de notificaciones no concedido", Toast.LENGTH_SHORT).show()
+      }
     }
 
-    private val avisoPendiente = mutableStateOf<Pair<String, String>?>(null)
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    enableEdgeToEdge()
 
-    private fun limpiarExtrasAviso(origen: Intent?) {
-        origen?.removeExtra(NotificationHelper.EXTRA_USUARIO_ID)
-        origen?.removeExtra(NotificationHelper.EXTRA_PRODUCTO_ID)
+    NotificationHelper.crearCanalNotificaciones(this)
+    pedirPermisoNotificaciones()
+
+    if (savedInstanceState == null) {
+      leerAviso(intent)
+    } else {
+      val uid = savedInstanceState.getString(ESTADO_AVISO_UID).orEmpty()
+      val productoId = savedInstanceState.getString(ESTADO_AVISO_ID).orEmpty()
+      if (uid.isNotBlank() && productoId.isNotBlank() && !AvisosAtendidos.fueAtendido(this, uid, productoId)) {
+        avisoUid = uid
+        avisoProductoId = productoId
+      }
+      limpiarExtrasAviso(intent)
     }
 
-    /** Un Intent de notificación se debe consumir una sola vez. */
-    private fun leerAviso(origen: Intent?) {
-        val uid = origen?.getStringExtra(NotificationHelper.EXTRA_USUARIO_ID)
-        val id = origen?.getStringExtra(NotificationHelper.EXTRA_PRODUCTO_ID)
-        if (!uid.isNullOrBlank() && !id.isNullOrBlank() &&
-            !AvisosAtendidos.fueAtendido(this, uid, id)
-        ) {
-            avisoPendiente.value = uid to id
-        }
-        // Sin esto, Android vuelve a abrir el mismo diálogo al girar la pantalla.
-        limpiarExtrasAviso(origen)
+    FirebaseAuth.getInstance().currentUser?.uid?.let { uid ->
+      ProgramadorAlertas.activar(this, uid)
     }
 
-    private fun atenderAviso() {
-        avisoPendiente.value = null
-        limpiarExtrasAviso(intent)
+    setContent {
+      ExpiryAlertTheme {
+        ExpiryAlertApp(
+          avisoUid = avisoUid,
+          avisoProductoId = avisoProductoId,
+          avisoAtendido = { atenderAviso() },
+          activarAlertas = { uid -> ProgramadorAlertas.activar(this, uid) },
+          cerrarAlertas = { uid -> ProgramadorAlertas.desactivar(this, uid) }
+        )
+      }
     }
+  }
 
-    override fun onSaveInstanceState(outState: Bundle) {
-        // Una confirmación NO atendida sobrevive a un giro del dispositivo.
-        // Una confirmación ya atendida no se reabre.
-        avisoPendiente.value?.let { (uid, id) ->
-            outState.putString(ESTADO_AVISO_UID, uid)
-            outState.putString(ESTADO_AVISO_ID, id)
-        }
-        super.onSaveInstanceState(outState)
+  private fun pedirPermisoNotificaciones() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+      if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+        solicitarPermisoNotificaciones.launch(Manifest.permission.POST_NOTIFICATIONS)
+      } else {
+        NotificationHelper.mostrarNotificacionPrueba(this)
+      }
+    } else {
+      NotificationHelper.mostrarNotificacionPrueba(this)
     }
+  }
+}
 
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        setIntent(intent)
-        leerAviso(intent)
+// ----------------------------------------------------
+// COMPONENTES REUTILIZABLES MINIMALISTAS
+// ----------------------------------------------------
+
+@Composable
+fun CampoTextoMinimalista(
+  value: String,
+  onValueChange: (String) -> Unit,
+  label: String,
+  placeholder: String = "",
+  readOnly: Boolean = false,
+  esPassword: Boolean = false,
+  keyboardType: KeyboardType = KeyboardType.Text
+) {
+  Column(modifier = Modifier.fillMaxWidth()) {
+    Text(
+      text = label,
+      fontSize = 13.sp,
+      fontWeight = FontWeight.Medium,
+      color = TextSecondary,
+      modifier = Modifier.padding(bottom = 6.dp, start = 2.dp)
+    )
+    OutlinedTextField(
+      value = value,
+      onValueChange = onValueChange,
+      placeholder = if (placeholder.isNotBlank()) {
+        { Text(placeholder, color = Color(0xFFA1A1AA), fontSize = 15.sp) }
+      } else null,
+      readOnly = readOnly,
+      singleLine = true,
+      modifier = Modifier.fillMaxWidth(),
+      shape = RoundedCornerShape(12.dp),
+      visualTransformation = if (esPassword) PasswordVisualTransformation() else VisualTransformation.None,
+      keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+      colors = OutlinedTextFieldDefaults.colors(
+        focusedContainerColor = SurfaceCard,
+        unfocusedContainerColor = SurfaceMuted,
+        focusedBorderColor = TextPrimary,
+        unfocusedBorderColor = BorderSubtle,
+        focusedTextColor = TextPrimary,
+        unfocusedTextColor = TextPrimary,
+        cursorColor = TextPrimary
+      )
+    )
+  }
+}
+
+@Composable
+fun CabeceraNavegacion(titulo: String, onRegresar: () -> Unit) {
+  Row(
+    modifier = Modifier
+      .fillMaxWidth()
+      .padding(bottom = 24.dp),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.SpaceBetween
+  ) {
+    Surface(
+      onClick = onRegresar,
+      shape = RoundedCornerShape(10.dp),
+      color = SurfaceCard,
+      border = BorderStroke(1.dp, BorderSubtle)
+    ) {
+      Text(
+        text = "← Volver",
+        fontSize = 14.sp,
+        fontWeight = FontWeight.Medium,
+        color = TextPrimary,
+        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+      )
     }
-
-    private val solicitarPermisoNotificaciones =
-        registerForActivityResult(
-            ActivityResultContracts.RequestPermission()
-        ) { concedido ->
-
-            if (concedido) {
-                Toast.makeText(
-                    this,
-                    "Notificaciones activadas",
-                    Toast.LENGTH_SHORT
-                ).show()
-
-                NotificationHelper.mostrarNotificacionPrueba(this)
-            } else {
-                Toast.makeText(
-                    this,
-                    "Permiso de notificaciones no concedido",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-        }
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        enableEdgeToEdge()
-
-        NotificationHelper.crearCanalNotificaciones(this)
-        pedirPermisoNotificaciones()
-        if (savedInstanceState == null) {
-            leerAviso(intent)
-        } else {
-            val uid = savedInstanceState.getString(ESTADO_AVISO_UID)
-            val productoId = savedInstanceState.getString(ESTADO_AVISO_ID)
-            if (!uid.isNullOrBlank() && !productoId.isNullOrBlank() &&
-                !AvisosAtendidos.fueAtendido(this, uid, productoId)
-            ) {
-                avisoPendiente.value = uid to productoId
-            }
-            // Nunca reproducir el Intent anterior durante la recreación.
-            limpiarExtrasAviso(intent)
-        }
-        FirebaseAuth.getInstance().currentUser?.uid?.let { uid ->
-            ProgramadorAlertas.activar(this, uid)
-        }
-
-        setContent {
-            ExpiryAlertTheme {
-                ExpiryAlertApp(
-                    aviso = avisoPendiente.value,
-                    avisoAtendido = { atenderAviso() },
-                    activarAlertas = { uid -> ProgramadorAlertas.activar(this, uid) },
-                    cerrarAlertas = { uid -> ProgramadorAlertas.desactivar(this, uid) }
-                )
-            }
-        }
-    }
-
-    private fun pedirPermisoNotificaciones() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (
-                checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
-                PackageManager.PERMISSION_GRANTED
-            ) {
-                solicitarPermisoNotificaciones.launch(
-                    Manifest.permission.POST_NOTIFICATIONS
-                )
-            } else {
-                NotificationHelper.mostrarNotificacionPrueba(this)
-            }
-        } else {
-            NotificationHelper.mostrarNotificacionPrueba(this)
-        }
-    }
+    Text(
+      text = titulo,
+      fontSize = 17.sp,
+      fontWeight = FontWeight.SemiBold,
+      color = TextPrimary
+    )
+    Spacer(modifier = Modifier.width(76.dp))
+  }
 }
 
 @Composable
 fun ExpiryAlertApp(
-    aviso: Pair<String, String>?,
-    avisoAtendido: () -> Unit,
-    activarAlertas: (String) -> Unit,
-    cerrarAlertas: (String) -> Unit
+  avisoUid: String,
+  avisoProductoId: String,
+  avisoAtendido: () -> Unit,
+  activarAlertas: (String) -> Unit,
+  cerrarAlertas: (String) -> Unit
 ) {
+  var pantalla by remember {
+    mutableStateOf(if (FirebaseAuth.getInstance().currentUser != null) "principal" else "inicio")
+  }
+  var productoEditar by remember { mutableStateOf(mapaVacio()) }
+  val contextoApp = LocalContext.current
 
-    var pantalla by remember {
-        mutableStateOf(
-            if (FirebaseAuth.getInstance().currentUser != null) {
-                "principal"
-            } else {
-                "inicio"
-            }
-        )
+  val accionCerrarSesion: () -> Unit = {
+    FirebaseAuth.getInstance().currentUser?.uid?.let { uid ->
+      cerrarAlertas(uid)
+      NotificationHelper.cancelarAlertasDeUsuario(contextoApp, uid)
     }
+    FirebaseAuth.getInstance().signOut()
+    productoEditar = mapaVacio()
+    avisoAtendido()
+    pantalla = "inicio"
+  }
 
-    var productoEditar by remember {
-        mutableStateOf<Map<String, Any>?>(null)
+  LaunchedEffect(pantalla) {
+    if (pantalla == "principal") {
+      FirebaseAuth.getInstance().currentUser?.uid?.let(activarAlertas)
     }
-    val contextoApp = LocalContext.current
+  }
 
-    LaunchedEffect(pantalla) {
-        if (pantalla == "principal") {
-            FirebaseAuth.getInstance().currentUser?.uid?.let(activarAlertas)
-        }
-    }
-
-    aviso?.let { (uid, id) ->
-        when {
-            FirebaseAuth.getInstance().currentUser?.uid != uid ||
-                AvisosAtendidos.fueAtendido(contextoApp, uid, id) -> {
-                LaunchedEffect(uid, id) { avisoAtendido() }
-            }
-            else -> DialogoConfirmacionCaducidad(uid, id, avisoAtendido)
-        }
-    }
-
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = Color(0xFFF7F5FA)
+  if (avisoUid.isNotBlank() && avisoProductoId.isNotBlank()) {
+    if (FirebaseAuth.getInstance().currentUser?.uid != avisoUid ||
+      AvisosAtendidos.fueAtendido(contextoApp, avisoUid, avisoProductoId)
     ) {
-
-        when (pantalla) {
-
-            "inicio" -> PantallaInicio(
-                irLogin = {
-                    pantalla = "login"
-                },
-                irRegistro = {
-                    pantalla = "registro"
-                }
-            )
-
-            "login" -> PantallaLogin(
-                regresar = {
-                    pantalla = "inicio"
-                },
-                irRegistro = {
-                    pantalla = "registro"
-                },
-                loginExitoso = {
-                    pantalla = "principal"
-                }
-            )
-
-            "registro" -> PantallaRegistro(
-                regresar = {
-                    pantalla = "inicio"
-                },
-                irLogin = {
-                    pantalla = "login"
-                },
-                registroExitoso = {
-                    pantalla = "principal"
-                }
-            )
-
-            "principal" -> PantallaPrincipal(
-                agregarProducto = {
-                    pantalla = "agregarProducto"
-                },
-                verRecetas = {
-                    pantalla = "recetas"
-                },
-                editarProducto = { producto ->
-                    productoEditar = producto
-                    pantalla = "editarProducto"
-                },
-                cerrarSesion = {
-                    FirebaseAuth.getInstance().currentUser?.uid?.let { uid ->
-                        cerrarAlertas(uid)
-                        NotificationHelper.cancelarAlertasDeUsuario(contextoApp, uid)
-                    }
-                    FirebaseAuth.getInstance().signOut()
-                    productoEditar = null
-                    avisoAtendido()
-                    pantalla = "inicio"
-                }
-            )
-
-            "recetas" -> RecetasScreen(
-                onVolver = { pantalla = "principal" }
-            )
-
-            "agregarProducto" -> PantallaAgregarProducto(
-                regresar = {
-                    pantalla = "principal"
-                },
-                productoGuardado = {
-                    pantalla = "principal"
-                }
-            )
-
-            "editarProducto" -> {
-
-                val producto = productoEditar
-
-                if (producto != null) {
-
-                    PantallaEditarProducto(
-                        producto = producto,
-                        regresar = {
-                            productoEditar = null
-                            pantalla = "principal"
-                        },
-                        productoActualizado = {
-                            productoEditar = null
-                            pantalla = "principal"
-                        }
-                    )
-
-                } else {
-                    pantalla = "principal"
-                }
-            }
-        }
+      LaunchedEffect(avisoUid, avisoProductoId) { avisoAtendido() }
+    } else {
+      DialogoConfirmacionCaducidad(avisoUid, avisoProductoId, avisoAtendido)
     }
+  }
+
+  Surface(modifier = Modifier.fillMaxSize(), color = BgPrimary) {
+    when (pantalla) {
+      "inicio" -> PantallaInicio(
+        irLogin = { pantalla = "login" },
+        irRegistro = { pantalla = "registro" }
+      )
+      "login" -> PantallaLogin(
+        regresar = { pantalla = "inicio" },
+        irRegistro = { pantalla = "registro" },
+        loginExitoso = { pantalla = "principal" }
+      )
+      "registro" -> PantallaRegistro(
+        regresar = { pantalla = "inicio" },
+        irLogin = { pantalla = "login" },
+        registroExitoso = { pantalla = "principal" }
+      )
+      "principal" -> PantallaPrincipal(
+        agregarProducto = { pantalla = "agregarProducto" },
+        verRecetas = { pantalla = "recetas" },
+        irPerfil = { pantalla = "perfil" },
+        editarProducto = { prod ->
+          productoEditar = prod
+          pantalla = "editarProducto"
+        },
+        cerrarSesion = accionCerrarSesion
+      )
+      "perfil" -> PantallaPerfil(
+        regresar = { pantalla = "principal" },
+        cerrarSesion = accionCerrarSesion
+      )
+      "recetas" -> RecetasScreen(
+        onVolver = { pantalla = "principal" }
+      )
+      "agregarProducto" -> PantallaAgregarProducto(
+        regresar = { pantalla = "principal" },
+        productoGuardado = { pantalla = "principal" }
+      )
+      "editarProducto" -> {
+        if (productoEditar.isNotEmpty()) {
+          PantallaEditarProducto(
+            producto = productoEditar,
+            regresar = {
+              productoEditar = mapaVacio()
+              pantalla = "principal"
+            },
+            productoActualizado = {
+              productoEditar = mapaVacio()
+              pantalla = "principal"
+            }
+          )
+        } else {
+          pantalla = "principal"
+        }
+      }
+    }
+  }
 }
 
 // ----------------------------------------------------
@@ -310,116 +358,115 @@ fun ExpiryAlertApp(
 // ----------------------------------------------------
 
 @Composable
-fun PantallaInicio(
-    irLogin: () -> Unit,
-    irRegistro: () -> Unit
-) {
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF7F5FA))
-            .padding(horizontal = 24.dp)
-            .padding(top = 90.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+fun PantallaInicio(irLogin: () -> Unit, irRegistro: () -> Unit) {
+  Column(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(BgPrimary)
+      .padding(horizontal = 28.dp)
+      .padding(top = 90.dp, bottom = 36.dp),
+    horizontalAlignment = Alignment.Start
+  ) {
+    Surface(
+      shape = RoundedCornerShape(14.dp),
+      color = AccentDark,
+      modifier = Modifier.size(48.dp)
     ) {
-
+      Box(contentAlignment = Alignment.Center) {
         Text(
-            text = "ExpiryAlert",
-            fontSize = 36.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF6750A4)
+          text = "EA",
+          color = Color.White,
+          fontSize = 16.sp,
+          fontWeight = FontWeight.Bold,
+          letterSpacing = 1.sp
         )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Text(
-            text = "Controla las fechas de caducidad\nde tus productos",
-            fontSize = 18.sp,
-            color = Color.DarkGray,
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(50.dp))
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    Color.White,
-                    RoundedCornerShape(20.dp)
-                )
-                .padding(24.dp)
-        ) {
-
-            Column {
-
-                Text(
-                    text = "Bienvenido",
-                    fontSize = 25.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Text(
-                    text = "Registra tus productos y recibe alertas antes de que caduquen.",
-                    fontSize = 16.sp,
-                    color = Color.Gray
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(40.dp))
-
-        Button(
-            onClick = irLogin,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(55.dp),
-            shape = RoundedCornerShape(15.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF6750A4),
-                contentColor = Color.White
-            )
-        ) {
-
-            Text(
-                text = "Iniciar sesión",
-                fontSize = 17.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        Spacer(modifier = Modifier.height(15.dp))
-
-        Button(
-            onClick = irRegistro,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(55.dp),
-            shape = RoundedCornerShape(15.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF9A82DB),
-                contentColor = Color.White
-            )
-        ) {
-
-            Text(
-                text = "Crear cuenta",
-                fontSize = 17.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        Spacer(modifier = Modifier.height(35.dp))
-
-        Text(
-            text = "Nunca olvides una fecha de caducidad",
-            fontSize = 14.sp,
-            color = Color.Gray
-        )
+      }
     }
+
+    Spacer(modifier = Modifier.height(28.dp))
+
+    Text(
+      text = "ExpiryAlert",
+      fontSize = 36.sp,
+      fontWeight = FontWeight.Bold,
+      color = TextPrimary,
+      letterSpacing = (-1).sp
+    )
+
+    Spacer(modifier = Modifier.height(10.dp))
+
+    Text(
+      text = "Gestión inteligente de inventario y control de caducidades sin distracciones.",
+      fontSize = 16.sp,
+      color = TextSecondary,
+      lineHeight = 24.sp
+    )
+
+    Spacer(modifier = Modifier.height(36.dp))
+
+    Surface(
+      modifier = Modifier.fillMaxWidth(),
+      shape = RoundedCornerShape(16.dp),
+      color = SurfaceCard,
+      border = BorderStroke(1.dp, BorderSubtle)
+    ) {
+      Column(
+        modifier = Modifier.padding(22.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+      ) {
+        ItemCaracteristica("Escaneo rápido", "Códigos de barras y lectura óptica de fechas.")
+        HorizontalDivider(color = SurfaceMuted)
+        ItemCaracteristica("Alertas oportunas", "Notificaciones antes de que tus productos venzan.")
+        HorizontalDivider(color = SurfaceMuted)
+        ItemCaracteristica("Cocina sin desperdicio", "Sugerencias de recetas basadas en tu despensa.")
+      }
+    }
+
+    Spacer(modifier = Modifier.weight(1f))
+
+    Button(
+      onClick = irLogin,
+      modifier = Modifier
+        .fillMaxWidth()
+        .height(52.dp),
+      shape = RoundedCornerShape(12.dp),
+      colors = ButtonDefaults.buttonColors(containerColor = AccentDark, contentColor = Color.White)
+    ) {
+      Text(text = "Iniciar sesión", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+    }
+
+    Spacer(modifier = Modifier.height(12.dp))
+
+    OutlinedButton(
+      onClick = irRegistro,
+      modifier = Modifier
+        .fillMaxWidth()
+        .height(52.dp),
+      shape = RoundedCornerShape(12.dp),
+      border = BorderStroke(1.dp, BorderSubtle),
+      colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary)
+    ) {
+      Text(text = "Crear una cuenta", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+    }
+  }
+}
+
+@Composable
+private fun ItemCaracteristica(titulo: String, descripcion: String) {
+  Row(verticalAlignment = Alignment.Top) {
+    Box(
+      modifier = Modifier
+        .padding(top = 6.dp)
+        .size(6.dp)
+        .clip(CircleShape)
+        .background(AccentSage)
+    )
+    Spacer(modifier = Modifier.width(12.dp))
+    Column {
+      Text(text = titulo, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+      Text(text = descripcion, fontSize = 13.sp, color = TextSecondary)
+    }
+  }
 }
 
 // ----------------------------------------------------
@@ -427,181 +474,108 @@ fun PantallaInicio(
 // ----------------------------------------------------
 
 @Composable
-fun PantallaLogin(
-    regresar: () -> Unit,
-    irRegistro: () -> Unit,
-    loginExitoso: () -> Unit
-) {
+fun PantallaLogin(regresar: () -> Unit, irRegistro: () -> Unit, loginExitoso: () -> Unit) {
+  var correo by remember { mutableStateOf("") }
+  var password by remember { mutableStateOf("") }
+  var cargando by remember { mutableStateOf(false) }
+  val context = LocalContext.current
+  val auth = FirebaseAuth.getInstance()
 
-    var correo by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var cargando by remember { mutableStateOf(false) }
+  Column(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(BgPrimary)
+      .verticalScroll(rememberScrollState())
+      .padding(horizontal = 24.dp)
+      .padding(top = 56.dp, bottom = 30.dp)
+  ) {
+    CabeceraNavegacion(titulo = "Acceso", onRegresar = regresar)
 
-    val context = LocalContext.current
-    val auth = FirebaseAuth.getInstance()
+    Text(
+      text = "Bienvenido de nuevo",
+      fontSize = 28.sp,
+      fontWeight = FontWeight.Bold,
+      color = TextPrimary,
+      letterSpacing = (-0.5).sp
+    )
+    Spacer(modifier = Modifier.height(6.dp))
+    Text(
+      text = "Ingresa tus credenciales para acceder a tu inventario.",
+      fontSize = 15.sp,
+      color = TextSecondary
+    )
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF7F5FA))
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp)
-            .padding(top = 70.dp, bottom = 30.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+    Spacer(modifier = Modifier.height(28.dp))
+
+    Surface(
+      modifier = Modifier.fillMaxWidth(),
+      shape = RoundedCornerShape(16.dp),
+      color = SurfaceCard,
+      border = BorderStroke(1.dp, BorderSubtle)
     ) {
-
-        Text(
-            text = "ExpiryAlert",
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF6750A4)
+      Column(modifier = Modifier.padding(22.dp)) {
+        CampoTextoMinimalista(
+          value = correo,
+          onValueChange = { correo = it },
+          label = "Correo electrónico",
+          placeholder = "nombre@correo.com",
+          keyboardType = KeyboardType.Email
         )
-
-        Spacer(modifier = Modifier.height(35.dp))
-
-        Text(
-            text = "Iniciar sesión",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold
+        Spacer(modifier = Modifier.height(16.dp))
+        CampoTextoMinimalista(
+          value = password,
+          onValueChange = { password = it },
+          label = "Contraseña",
+          placeholder = "••••••••",
+          esPassword = true,
+          keyboardType = KeyboardType.Password
         )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = "Ingresa a tu cuenta para continuar",
-            fontSize = 16.sp,
-            color = Color.Gray
-        )
-
-        Spacer(modifier = Modifier.height(35.dp))
-
-        OutlinedTextField(
-            value = correo,
-            onValueChange = { correo = it },
-            label = {
-                Text("Correo electrónico")
-            },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Email
-            )
-        )
-
-        Spacer(modifier = Modifier.height(15.dp))
-
-        OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
-            label = {
-                Text("Contraseña")
-            },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Password
-            )
-        )
-
-        Spacer(modifier = Modifier.height(30.dp))
-
+        Spacer(modifier = Modifier.height(24.dp))
         Button(
-            onClick = {
-
-                if (correo.isBlank() || password.isBlank()) {
-
-                    Toast.makeText(
-                        context,
-                        "Completa todos los campos",
-                        Toast.LENGTH_SHORT
-                    ).show()
-
-                } else {
-
-                    cargando = true
-
-                    auth.signInWithEmailAndPassword(
-                        correo.trim(),
-                        password
-                    ).addOnCompleteListener { task ->
-
-                        cargando = false
-
-                        if (task.isSuccessful) {
-
-                            Toast.makeText(
-                                context,
-                                "Inicio de sesión correcto",
-                                Toast.LENGTH_SHORT
-                            ).show()
-
-                            loginExitoso()
-
-                        } else {
-
-                            Toast.makeText(
-                                context,
-                                "No se pudo iniciar sesión: ${task.exception?.localizedMessage}",
-                                Toast.LENGTH_LONG
-                            ).show()
-                        }
-                    }
-                }
-            },
-            enabled = !cargando,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(55.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF6750A4),
-                contentColor = Color.White
-            ),
-            shape = RoundedCornerShape(15.dp)
-        ) {
-
-            if (cargando) {
-
-                CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp),
-                    color = Color.White,
-                    strokeWidth = 2.dp
-                )
-
+          onClick = {
+            if (correo.isBlank() || password.isBlank()) {
+              Toast.makeText(context, "Completa todos los campos", Toast.LENGTH_SHORT).show()
             } else {
-
-                Text(
-                    text = "Entrar",
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold
-                )
+              cargando = true
+              auth.signInWithEmailAndPassword(correo.trim(), password).addOnCompleteListener { task ->
+                cargando = false
+                if (task.isSuccessful) {
+                  loginExitoso()
+                } else {
+                  Toast.makeText(context, "Error: ${task.exception?.localizedMessage}", Toast.LENGTH_LONG).show()
+                }
+              }
             }
-        }
-
-        Spacer(modifier = Modifier.height(15.dp))
-
-        TextButton(
-            onClick = irRegistro
+          },
+          enabled = !cargando,
+          modifier = Modifier
+            .fillMaxWidth()
+            .height(50.dp),
+          colors = ButtonDefaults.buttonColors(containerColor = AccentDark, contentColor = Color.White),
+          shape = RoundedCornerShape(12.dp)
         ) {
-
-            Text(
-                text = "¿No tienes cuenta? Crear cuenta",
-                color = Color(0xFF6750A4)
-            )
+          if (cargando) {
+            CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+          } else {
+            Text(text = "Continuar", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+          }
         }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        TextButton(
-            onClick = regresar
-        ) {
-
-            Text(
-                text = "← Volver",
-                color = Color.Gray
-            )
-        }
+      }
     }
+
+    Spacer(modifier = Modifier.height(20.dp))
+
+    Row(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalArrangement = Arrangement.Center,
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      Text(text = "¿No tienes cuenta?", fontSize = 14.sp, color = TextSecondary)
+      TextButton(onClick = irRegistro) {
+        Text(text = "Regístrate", fontSize = 14.sp, color = TextPrimary, fontWeight = FontWeight.SemiBold)
+      }
+    }
+  }
 }
 
 // ----------------------------------------------------
@@ -609,224 +583,415 @@ fun PantallaLogin(
 // ----------------------------------------------------
 
 @Composable
-fun PantallaRegistro(
-    regresar: () -> Unit,
-    irLogin: () -> Unit,
-    registroExitoso: () -> Unit
-) {
+fun PantallaRegistro(regresar: () -> Unit, irLogin: () -> Unit, registroExitoso: () -> Unit) {
+  var nombre by remember { mutableStateOf("") }
+  var correo by remember { mutableStateOf("") }
+  var password by remember { mutableStateOf("") }
+  var confirmarPassword by remember { mutableStateOf("") }
+  var cargando by remember { mutableStateOf(false) }
+  val context = LocalContext.current
+  val auth = FirebaseAuth.getInstance()
 
-    var nombre by remember { mutableStateOf("") }
-    var correo by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var confirmarPassword by remember { mutableStateOf("") }
-    var cargando by remember { mutableStateOf(false) }
+  Column(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(BgPrimary)
+      .verticalScroll(rememberScrollState())
+      .padding(horizontal = 24.dp)
+      .padding(top = 56.dp, bottom = 30.dp)
+  ) {
+    CabeceraNavegacion(titulo = "Registro", onRegresar = regresar)
 
-    val context = LocalContext.current
-    val auth = FirebaseAuth.getInstance()
+    Text(
+      text = "Crea tu cuenta",
+      fontSize = 28.sp,
+      fontWeight = FontWeight.Bold,
+      color = TextPrimary,
+      letterSpacing = (-0.5).sp
+    )
+    Spacer(modifier = Modifier.height(6.dp))
+    Text(
+      text = "Configura tu perfil en segundos para empezar.",
+      fontSize = 15.sp,
+      color = TextSecondary
+    )
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF7F5FA))
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp)
-            .padding(top = 55.dp, bottom = 30.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+    Spacer(modifier = Modifier.height(24.dp))
+
+    Surface(
+      modifier = Modifier.fillMaxWidth(),
+      shape = RoundedCornerShape(16.dp),
+      color = SurfaceCard,
+      border = BorderStroke(1.dp, BorderSubtle)
     ) {
-
-        Text(
-            text = "ExpiryAlert",
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF6750A4)
+      Column(modifier = Modifier.padding(22.dp)) {
+        CampoTextoMinimalista(
+          value = nombre,
+          onValueChange = { nombre = it },
+          label = "Nombre o alias",
+          placeholder = "Ej. Martín"
         )
-
-        Spacer(modifier = Modifier.height(25.dp))
-
-        Text(
-            text = "Crear cuenta",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold
+        Spacer(modifier = Modifier.height(14.dp))
+        CampoTextoMinimalista(
+          value = correo,
+          onValueChange = { correo = it },
+          label = "Correo electrónico",
+          placeholder = "nombre@correo.com",
+          keyboardType = KeyboardType.Email
         )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = "Crea tu cuenta para comenzar",
-            color = Color.Gray,
-            fontSize = 16.sp
+        Spacer(modifier = Modifier.height(14.dp))
+        CampoTextoMinimalista(
+          value = password,
+          onValueChange = { password = it },
+          label = "Contraseña",
+          placeholder = "Mínimo 6 caracteres",
+          esPassword = true,
+          keyboardType = KeyboardType.Password
         )
-
-        Spacer(modifier = Modifier.height(25.dp))
-
-        OutlinedTextField(
-            value = nombre,
-            onValueChange = { nombre = it },
-            label = { Text("Nombre") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
+        Spacer(modifier = Modifier.height(14.dp))
+        CampoTextoMinimalista(
+          value = confirmarPassword,
+          onValueChange = { confirmarPassword = it },
+          label = "Confirmar contraseña",
+          placeholder = "Repite tu contraseña",
+          esPassword = true,
+          keyboardType = KeyboardType.Password
         )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        OutlinedTextField(
-            value = correo,
-            onValueChange = { correo = it },
-            label = { Text("Correo electrónico") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Email
-            )
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
-            label = { Text("Contraseña") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Password
-            )
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        OutlinedTextField(
-            value = confirmarPassword,
-            onValueChange = { confirmarPassword = it },
-            label = { Text("Confirmar contraseña") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Password
-            )
-        )
-
-        Spacer(modifier = Modifier.height(25.dp))
-
+        Spacer(modifier = Modifier.height(24.dp))
         Button(
-            onClick = {
-
-                when {
-
-                    nombre.isBlank() ||
-                            correo.isBlank() ||
-                            password.isBlank() ||
-                            confirmarPassword.isBlank() -> {
-
-                        Toast.makeText(
-                            context,
-                            "Completa todos los campos",
-                            Toast.LENGTH_SHORT
-                        ).show()
+          onClick = {
+            when {
+              nombre.isBlank() || correo.isBlank() || password.isBlank() || confirmarPassword.isBlank() ->
+                Toast.makeText(context, "Completa todos los campos", Toast.LENGTH_SHORT).show()
+              password != confirmarPassword ->
+                Toast.makeText(context, "Las contraseñas no coinciden", Toast.LENGTH_SHORT).show()
+              password.length < 6 ->
+                Toast.makeText(context, "La contraseña debe tener al menos 6 caracteres", Toast.LENGTH_SHORT).show()
+              else -> {
+                cargando = true
+                auth.createUserWithEmailAndPassword(correo.trim(), password).addOnCompleteListener { task ->
+                  if (task.isSuccessful) {
+                    val request = UserProfileChangeRequest.Builder().setDisplayName(nombre.trim()).build()
+                    auth.currentUser?.updateProfile(request)?.addOnCompleteListener {
+                      cargando = false
+                      registroExitoso()
+                    } ?: run {
+                      cargando = false
+                      registroExitoso()
                     }
-
-                    password != confirmarPassword -> {
-
-                        Toast.makeText(
-                            context,
-                            "Las contraseñas no coinciden",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-
-                    password.length < 6 -> {
-
-                        Toast.makeText(
-                            context,
-                            "La contraseña debe tener al menos 6 caracteres",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-
-                    else -> {
-
-                        cargando = true
-
-                        auth.createUserWithEmailAndPassword(
-                            correo.trim(),
-                            password
-                        ).addOnCompleteListener { task ->
-
-                            cargando = false
-
-                            if (task.isSuccessful) {
-
-                                Toast.makeText(
-                                    context,
-                                    "Cuenta creada correctamente",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-
-                                registroExitoso()
-
-                            } else {
-
-                                Toast.makeText(
-                                    context,
-                                    "Error al crear cuenta: ${task.exception?.localizedMessage}",
-                                    Toast.LENGTH_LONG
-                                ).show()
-                            }
-                        }
-                    }
+                  } else {
+                    cargando = false
+                    Toast.makeText(context, "Error: ${task.exception?.localizedMessage}", Toast.LENGTH_LONG).show()
+                  }
                 }
-            },
-            enabled = !cargando,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(55.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF6750A4),
-                contentColor = Color.White
-            ),
-            shape = RoundedCornerShape(15.dp)
-        ) {
-
-            if (cargando) {
-
-                CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp),
-                    color = Color.White,
-                    strokeWidth = 2.dp
-                )
-
-            } else {
-
-                Text(
-                    text = "Registrarme",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 17.sp
-                )
+              }
             }
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        TextButton(
-            onClick = irLogin
+          },
+          enabled = !cargando,
+          modifier = Modifier
+            .fillMaxWidth()
+            .height(50.dp),
+          colors = ButtonDefaults.buttonColors(containerColor = AccentDark, contentColor = Color.White),
+          shape = RoundedCornerShape(12.dp)
         ) {
-            Text(
-                text = "¿Ya tienes cuenta? Iniciar sesión",
-                color = Color(0xFF6750A4)
-            )
+          if (cargando) {
+            CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+          } else {
+            Text(text = "Crear cuenta", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+          }
         }
-
-        TextButton(
-            onClick = regresar
-        ) {
-            Text(
-                text = "← Volver",
-                color = Color.Gray
-            )
-        }
+      }
     }
+
+    Spacer(modifier = Modifier.height(18.dp))
+
+    Row(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalArrangement = Arrangement.Center,
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      Text(text = "¿Ya tienes cuenta?", fontSize = 14.sp, color = TextSecondary)
+      TextButton(onClick = irLogin) {
+        Text(text = "Inicia sesión", fontSize = 14.sp, color = TextPrimary, fontWeight = FontWeight.SemiBold)
+      }
+    }
+  }
+}
+
+// ----------------------------------------------------
+// PANTALLA DE PERFIL DE USUARIO
+// ----------------------------------------------------
+
+@Composable
+fun PantallaPerfil(regresar: () -> Unit, cerrarSesion: () -> Unit) {
+  val context = LocalContext.current
+  val usuario = FirebaseAuth.getInstance().currentUser
+  val db = FirebaseFirestore.getInstance()
+
+  var nombreEditable by remember { mutableStateOf(usuario?.displayName.orEmpty()) }
+  var guardandoNombre by remember { mutableStateOf(false) }
+  var editandoNombre by remember { mutableStateOf(false) }
+
+  var totalProductos by remember { mutableIntStateOf(0) }
+  var seguros by remember { mutableIntStateOf(0) }
+  var porVencer by remember { mutableIntStateOf(0) }
+  var vencidos by remember { mutableIntStateOf(0) }
+
+  LaunchedEffect(usuario?.uid) {
+    usuario?.uid?.let { uid ->
+      db.collection("productos").whereEqualTo("usuarioId", uid).get().addOnSuccessListener { snapshot ->
+        val lista = snapshot.documents.mapNotNull { doc ->
+          InventarioProductos.productoVisible(doc.id, doc.data)
+        }
+        totalProductos = lista.size
+        seguros = lista.count { calcularEstadoCaducidad(it["fechaCaducidad"]?.toString().orEmpty()) == "Seguro" }
+        porVencer = lista.count { calcularEstadoCaducidad(it["fechaCaducidad"]?.toString().orEmpty()) == "Próximo a caducar" }
+        vencidos = lista.count { calcularEstadoCaducidad(it["fechaCaducidad"]?.toString().orEmpty()) == "Vencido" }
+      }
+    }
+  }
+
+  val inicial = remember(nombreEditable, usuario?.email) {
+    val base = nombreEditable.ifBlank { usuario?.email ?: "U" }
+    base.trim().firstOrNull()?.uppercaseChar()?.toString() ?: "U"
+  }
+
+  val fechaCreacionCuenta = remember(usuario) {
+    usuario?.metadata?.creationTimestamp?.let { ts ->
+      if (ts > 0) SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(ts) else null
+    } ?: "Reciente"
+  }
+
+  Column(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(BgPrimary)
+      .verticalScroll(rememberScrollState())
+      .padding(horizontal = 24.dp)
+      .padding(top = 56.dp, bottom = 36.dp)
+  ) {
+    CabeceraNavegacion(titulo = "Perfil", onRegresar = regresar)
+
+    Surface(
+      modifier = Modifier.fillMaxWidth(),
+      shape = RoundedCornerShape(16.dp),
+      color = SurfaceCard,
+      border = BorderStroke(1.dp, BorderSubtle)
+    ) {
+      Column(
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+      ) {
+        Box(
+          modifier = Modifier
+            .size(72.dp)
+            .clip(CircleShape)
+            .background(AccentDark),
+          contentAlignment = Alignment.Center
+        ) {
+          Text(text = inicial, fontSize = 28.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (!editandoNombre) {
+          Text(
+            text = nombreEditable.ifBlank { "Usuario" },
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextPrimary,
+            textAlign = TextAlign.Center
+          )
+          Spacer(modifier = Modifier.height(4.dp))
+          Text(text = usuario?.email ?: "Sin correo asociado", fontSize = 14.sp, color = TextSecondary)
+          Spacer(modifier = Modifier.height(16.dp))
+          OutlinedButton(
+            onClick = { editandoNombre = true },
+            shape = RoundedCornerShape(10.dp),
+            border = BorderStroke(1.dp, BorderSubtle),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+          ) {
+            Text("Editar nombre", fontSize = 13.sp, color = TextPrimary, fontWeight = FontWeight.Medium)
+          }
+        } else {
+          CampoTextoMinimalista(
+            value = nombreEditable,
+            onValueChange = { nombreEditable = it },
+            label = "Nombre para mostrar"
+          )
+          Spacer(modifier = Modifier.height(14.dp))
+          Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            OutlinedButton(
+              onClick = {
+                nombreEditable = usuario?.displayName.orEmpty()
+                editandoNombre = false
+              },
+              modifier = Modifier.weight(1f),
+              shape = RoundedCornerShape(10.dp),
+              border = BorderStroke(1.dp, BorderSubtle)
+            ) {
+              Text("Cancelar", color = TextSecondary)
+            }
+            Button(
+              onClick = {
+                if (nombreEditable.isBlank()) {
+                  Toast.makeText(context, "Escribe un nombre válido", Toast.LENGTH_SHORT).show()
+                } else {
+                  guardandoNombre = true
+                  val req = UserProfileChangeRequest.Builder().setDisplayName(nombreEditable.trim()).build()
+                  usuario?.updateProfile(req)?.addOnCompleteListener { task ->
+                    guardandoNombre = false
+                    if (task.isSuccessful) {
+                      editandoNombre = false
+                      Toast.makeText(context, "Nombre actualizado", Toast.LENGTH_SHORT).show()
+                    } else {
+                      Toast.makeText(context, "No se pudo actualizar", Toast.LENGTH_SHORT).show()
+                    }
+                  }
+                }
+              },
+              enabled = !guardandoNombre,
+              modifier = Modifier.weight(1f),
+              shape = RoundedCornerShape(10.dp),
+              colors = ButtonDefaults.buttonColors(containerColor = AccentDark)
+            ) {
+              Text(if (guardandoNombre) "Guardando..." else "Guardar", color = Color.White)
+            }
+          }
+        }
+      }
+    }
+
+    Spacer(modifier = Modifier.height(18.dp))
+
+    Text(
+      text = "RESUMEN DE DESPENSA",
+      fontSize = 12.sp,
+      fontWeight = FontWeight.SemiBold,
+      color = TextSecondary,
+      letterSpacing = 0.8.sp,
+      modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
+    )
+
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+      EstadisticaMiniCard(Modifier.weight(1f), "Activos", totalProductos.toString(), TextPrimary)
+      EstadisticaMiniCard(Modifier.weight(1f), "En orden", seguros.toString(), StatusSafe)
+      EstadisticaMiniCard(Modifier.weight(1f), "Por vencer", porVencer.toString(), StatusWarn)
+      EstadisticaMiniCard(Modifier.weight(1f), "Vencidos", vencidos.toString(), StatusDanger)
+    }
+
+    Spacer(modifier = Modifier.height(22.dp))
+
+    Text(
+      text = "PREFERENCIAS Y CUENTA",
+      fontSize = 12.sp,
+      fontWeight = FontWeight.SemiBold,
+      color = TextSecondary,
+      letterSpacing = 0.8.sp,
+      modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
+    )
+
+    Surface(
+      modifier = Modifier.fillMaxWidth(),
+      shape = RoundedCornerShape(16.dp),
+      color = SurfaceCard,
+      border = BorderStroke(1.dp, BorderSubtle)
+    ) {
+      Column(modifier = Modifier.padding(20.dp)) {
+        FilaDetallePerfil("Miembro desde", fechaCreacionCuenta)
+        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = SurfaceMuted)
+        FilaDetallePerfil("ID de cuenta", "${usuario?.uid?.take(10) ?: "N/A"}…")
+        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = SurfaceMuted)
+        OutlinedButton(
+          onClick = {
+            NotificationHelper.mostrarNotificacionPrueba(context)
+            Toast.makeText(context, "Notificación enviada", Toast.LENGTH_SHORT).show()
+          },
+          modifier = Modifier.fillMaxWidth(),
+          shape = RoundedCornerShape(10.dp),
+          border = BorderStroke(1.dp, BorderSubtle)
+        ) {
+          Text("Enviar notificación de prueba", color = TextPrimary, fontSize = 13.sp)
+        }
+      }
+    }
+
+    Spacer(modifier = Modifier.height(24.dp))
+
+    OutlinedButton(
+      onClick = cerrarSesion,
+      modifier = Modifier
+        .fillMaxWidth()
+        .height(50.dp),
+      shape = RoundedCornerShape(12.dp),
+      border = BorderStroke(1.dp, Color(0xFFFECACA)),
+      colors = ButtonDefaults.outlinedButtonColors(
+        containerColor = StatusDangerBg,
+        contentColor = StatusDanger
+      )
+    ) {
+      Text(text = "Cerrar sesión", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+    }
+  }
+}
+
+@Composable
+private fun FilaDetallePerfil(etiqueta: String, valor: String) {
+  Row(
+    modifier = Modifier.fillMaxWidth(),
+    horizontalArrangement = Arrangement.SpaceBetween,
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    Text(text = etiqueta, fontSize = 14.sp, color = TextSecondary)
+    Text(text = valor, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
+  }
+}
+
+@Composable
+fun EstadisticaMiniCard(
+  modifier: Modifier = Modifier,
+  titulo: String,
+  valor: String,
+  colorIndicador: Color
+) {
+  Surface(
+    modifier = modifier,
+    shape = RoundedCornerShape(14.dp),
+    color = SurfaceCard,
+    border = BorderStroke(1.dp, BorderSubtle)
+  ) {
+    Column(
+      modifier = Modifier.padding(vertical = 14.dp, horizontal = 10.dp),
+      horizontalAlignment = Alignment.Start
+    ) {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+          modifier = Modifier
+            .size(7.dp)
+            .clip(CircleShape)
+            .background(colorIndicador)
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+          text = titulo,
+          fontSize = 11.sp,
+          fontWeight = FontWeight.Medium,
+          color = TextSecondary,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis
+        )
+      }
+      Spacer(modifier = Modifier.height(6.dp))
+      Text(
+        text = valor,
+        fontSize = 22.sp,
+        fontWeight = FontWeight.Bold,
+        color = TextPrimary
+      )
+    }
+  }
 }
 
 // ----------------------------------------------------
@@ -835,554 +1000,460 @@ fun PantallaRegistro(
 
 @Composable
 fun PantallaPrincipal(
-    agregarProducto: () -> Unit,
-    verRecetas: () -> Unit,
-    editarProducto: (Map<String, Any>) -> Unit,
-    cerrarSesion: () -> Unit
+  agregarProducto: () -> Unit,
+  verRecetas: () -> Unit,
+  irPerfil: () -> Unit,
+  editarProducto: (ProductoMapa) -> Unit,
+  cerrarSesion: () -> Unit
 ) {
+  val usuario = FirebaseAuth.getInstance().currentUser
+  val db = FirebaseFirestore.getInstance()
+  val context = LocalContext.current
 
-    val usuario = FirebaseAuth.getInstance().currentUser
-    val db = FirebaseFirestore.getInstance()
-    val context = LocalContext.current
+  var productos by remember { mutableStateOf(listaProductosVacia()) }
+  var cargando by remember { mutableStateOf(true) }
+  var errorCarga by remember { mutableStateOf("") }
+  var productoEliminar by remember { mutableStateOf(mapaVacio()) }
+  var revisandoCaducidades by remember { mutableStateOf(false) }
+  var resultadoRevision by remember { mutableStateOf("") }
 
-    var productos by remember {
-        mutableStateOf<List<Map<String, Any>>>(emptyList())
-    }
+  val nombreMostrado = remember(usuario?.displayName, usuario?.email) {
+    val display = usuario?.displayName
+    if (!display.isNullOrBlank()) display
+    else usuario?.email?.substringBefore("@")?.replaceFirstChar { it.uppercase() } ?: "Usuario"
+  }
 
-    var cargando by remember { mutableStateOf(true) }
-    var errorCarga by remember { mutableStateOf<String?>(null) }
+  val inicialAvatar = remember(nombreMostrado) {
+    nombreMostrado.trim().firstOrNull()?.uppercaseChar()?.toString() ?: "U"
+  }
 
-    var productoEliminar by remember {
-        mutableStateOf<Map<String, Any>?>(null)
-    }
+  val conteoSeguros = remember(productos) {
+    productos.count { calcularEstadoCaducidad(it["fechaCaducidad"]?.toString().orEmpty()) == "Seguro" }
+  }
+  val conteoPorVencer = remember(productos) {
+    productos.count { calcularEstadoCaducidad(it["fechaCaducidad"]?.toString().orEmpty()) == "Próximo a caducar" }
+  }
+  val conteoVencidos = remember(productos) {
+    productos.count { calcularEstadoCaducidad(it["fechaCaducidad"]?.toString().orEmpty()) == "Vencido" }
+  }
 
-    var revisandoCaducidades by remember { mutableStateOf(false) }
-    var resultadoRevision by remember { mutableStateOf<String?>(null) }
-
-    DisposableEffect(usuario?.uid) {
-
-        if (usuario == null) {
-
+  DisposableEffect(usuario?.uid) {
+    if (usuario == null) {
+      cargando = false
+      errorCarga = "No hay una sesión iniciada."
+      onDispose { }
+    } else {
+      val listener = db.collection("productos")
+        .whereEqualTo("usuarioId", usuario.uid)
+        .addSnapshotListener { snapshot, error ->
+          if (error != null) {
             cargando = false
-            errorCarga = "No hay una sesión iniciada."
-
-            onDispose { }
-
-        } else {
-
-            val listener = db.collection("productos")
-                .whereEqualTo("usuarioId", usuario.uid)
-                .addSnapshotListener { snapshot, error ->
-
-                    if (error != null) {
-                        cargando = false
-                        errorCarga = error.localizedMessage
-                        return@addSnapshotListener
-                    }
-
-                    if (snapshot != null) {
-
-                        productos = snapshot.documents.mapNotNull { documento ->
-                            // Solo productos activos y siempre con su ID real de Firestore.
-                            // Antes se devolvían también los archivados, pero sin ID.
-                            InventarioProductos.productoVisible(documento.id, documento.data)
-                        }
-
-                        cargando = false
-                        errorCarga = null
-                    }
-                }
-
-            onDispose {
-                listener.remove()
+            errorCarga = error.localizedMessage ?: "Error desconocido"
+            return@addSnapshotListener
+          }
+          if (snapshot != null) {
+            productos = snapshot.documents.mapNotNull { doc ->
+              InventarioProductos.productoVisible(doc.id, doc.data)
             }
+            cargando = false
+            errorCarga = ""
+          }
         }
+      onDispose { listener.remove() }
     }
+  }
 
-    // ------------------------------------------------
-    // CONFIRMACIÓN PARA ELIMINAR
-    // ------------------------------------------------
-
-    productoEliminar?.let { producto ->
-
-        AlertDialog(
-            onDismissRequest = {
-                productoEliminar = null
-            },
-
-            title = {
-                Text(
-                    text = "Eliminar producto",
-                    fontWeight = FontWeight.Bold
-                )
-            },
-
-            text = {
-                Text(
-                    text = "¿Seguro que deseas eliminar \"${producto["nombre"]}\"?\n\nEsta acción no se puede deshacer."
-                )
-            },
-
-            confirmButton = {
-
-                Button(
-                    onClick = {
-
-                        val id = producto["id"]?.toString()
-
-                        if (id.isNullOrBlank()) {
-
-                            Toast.makeText(
-                                context,
-                                "No se encontró el ID del producto",
-                                Toast.LENGTH_SHORT
-                            ).show()
-
-                            productoEliminar = null
-
-                        } else {
-
-                            db.collection("productos")
-                                .document(id)
-                                .delete()
-                                .addOnSuccessListener {
-
-                                    FirebaseAuth.getInstance().currentUser?.uid?.let { uid ->
-                                        NotificationHelper.cancelarAlerta(context, uid, id)
-                                    }
-                                    Toast.makeText(
-                                        context,
-                                        "Producto eliminado",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-
-                                    productoEliminar = null
-                                }
-                                .addOnFailureListener { error ->
-
-                                    Toast.makeText(
-                                        context,
-                                        "Error al eliminar: ${error.localizedMessage}",
-                                        Toast.LENGTH_LONG
-                                    ).show()
-
-                                    productoEliminar = null
-                                }
-                        }
-                    },
-
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFD32F2F),
-                        contentColor = Color.White
-                    )
-                ) {
-
-                    Text(
-                        text = "Eliminar",
-                        fontWeight = FontWeight.Bold
-                    )
+  if (productoEliminar.isNotEmpty()) {
+    AlertDialog(
+      onDismissRequest = { productoEliminar = mapaVacio() },
+      containerColor = SurfaceCard,
+      title = { Text(text = "Eliminar producto", fontWeight = FontWeight.Bold, color = TextPrimary) },
+      text = {
+        Text(
+          text = "¿Confirmas que deseas eliminar \"${productoEliminar["nombre"]}\" de tu inventario?",
+          color = TextSecondary
+        )
+      },
+      confirmButton = {
+        Button(
+          onClick = {
+            val id = productoEliminar["id"]?.toString().orEmpty()
+            if (id.isBlank()) {
+              Toast.makeText(context, "No se encontró el ID del producto", Toast.LENGTH_SHORT).show()
+              productoEliminar = mapaVacio()
+            } else {
+              db.collection("productos").document(id).delete()
+                .addOnSuccessListener {
+                  FirebaseAuth.getInstance().currentUser?.uid?.let { uid ->
+                    NotificationHelper.cancelarAlerta(context, uid, id)
+                  }
+                  Toast.makeText(context, "Producto eliminado", Toast.LENGTH_SHORT).show()
+                  productoEliminar = mapaVacio()
                 }
-            },
-
-            dismissButton = {
-
-                TextButton(
-                    onClick = {
-                        productoEliminar = null
-                    }
-                ) {
-
-                    Text(
-                        text = "Cancelar",
-                        color = Color.Gray
-                    )
+                .addOnFailureListener { err ->
+                  Toast.makeText(context, "Error: ${err.localizedMessage}", Toast.LENGTH_LONG).show()
+                  productoEliminar = mapaVacio()
                 }
             }
-        )
-    }
+          },
+          colors = ButtonDefaults.buttonColors(containerColor = StatusDanger, contentColor = Color.White),
+          shape = RoundedCornerShape(10.dp)
+        ) {
+          Text(text = "Eliminar", fontWeight = FontWeight.SemiBold)
+        }
+      },
+      dismissButton = {
+        TextButton(onClick = { productoEliminar = mapaVacio() }) {
+          Text(text = "Cancelar", color = TextSecondary)
+        }
+      }
+    )
+  }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF7F5FA))
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp)
-            .padding(top = 80.dp, bottom = 30.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+  Column(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(BgPrimary)
+      .verticalScroll(rememberScrollState())
+      .padding(horizontal = 20.dp)
+      .padding(top = 56.dp, bottom = 32.dp)
+  ) {
+    // Cabecera minimalista
+    Row(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalArrangement = Arrangement.SpaceBetween,
+      verticalAlignment = Alignment.CenterVertically
     ) {
-
+      Column(modifier = Modifier.weight(1f)) {
         Text(
-            text = "ExpiryAlert",
-            fontSize = 34.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF6750A4)
+          text = "Hola, $nombreMostrado",
+          fontSize = 13.sp,
+          fontWeight = FontWeight.Medium,
+          color = TextSecondary,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis
         )
-
-        Spacer(modifier = Modifier.height(30.dp))
-
+        Spacer(modifier = Modifier.height(2.dp))
         Text(
-            text = "¡Bienvenido!",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold
+          text = "Mi Despensa",
+          fontSize = 28.sp,
+          fontWeight = FontWeight.Bold,
+          color = TextPrimary,
+          letterSpacing = (-0.5).sp
         )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = usuario?.email ?: "",
+      }
+      Surface(
+        modifier = Modifier
+          .size(44.dp)
+          .clip(CircleShape)
+          .clickable { irPerfil() },
+        shape = CircleShape,
+        color = SurfaceCard,
+        border = BorderStroke(1.dp, BorderSubtle)
+      ) {
+        Box(contentAlignment = Alignment.Center) {
+          Text(
+            text = inicialAvatar,
+            color = TextPrimary,
             fontSize = 16.sp,
-            color = Color.Gray
-        )
-
-        Spacer(modifier = Modifier.height(35.dp))
-
-        Text(
-            text = "Mis productos",
-            fontSize = 25.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(15.dp))
-
-        when {
-
-            cargando -> {
-
-                Spacer(modifier = Modifier.height(25.dp))
-
-                CircularProgressIndicator(
-                    color = Color(0xFF6750A4)
-                )
-
-                Spacer(modifier = Modifier.height(25.dp))
-            }
-
-            errorCarga != null -> {
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            Color.White,
-                            RoundedCornerShape(20.dp)
-                        )
-                        .padding(24.dp)
-                ) {
-
-                    Column {
-
-                        Text(
-                            text = "No se pudieron cargar los productos",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Text(
-                            text = errorCarga ?: "",
-                            color = Color.Gray,
-                            fontSize = 14.sp
-                        )
-                    }
-                }
-            }
-
-            productos.isEmpty() -> {
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            Color.White,
-                            RoundedCornerShape(20.dp)
-                        )
-                        .padding(24.dp)
-                ) {
-
-                    Column {
-
-                        Text(
-                            text = "Todavía no tienes productos",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Text(
-                            text = "Presiona “Agregar producto” para registrar el primero.",
-                            fontSize = 16.sp,
-                            color = Color.Gray
-                        )
-                    }
-                }
-            }
-
-            else -> {
-
-                productos.forEach { producto ->
-
-                    TarjetaProducto(
-                        producto = producto,
-
-                        editar = {
-                            editarProducto(producto)
-                        },
-
-                        eliminar = {
-                            productoEliminar = producto
-                        }
-                    )
-
-                    Spacer(modifier = Modifier.height(15.dp))
-                }
-            }
+            fontWeight = FontWeight.Bold
+          )
         }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        OutlinedButton(
-            onClick = {
-                usuario?.uid?.let { uid ->
-                    revisandoCaducidades = true
-                    resultadoRevision = null
-                    RevisionManualCaducidad.revisar(context, uid) { mensaje ->
-                        revisandoCaducidades = false
-                        resultadoRevision = mensaje
-                    }
-                }
-            },
-            enabled = !revisandoCaducidades,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(if (revisandoCaducidades) "Revisando productos…" else "🔔 Revisar caducidades ahora")
-        }
-        if (revisandoCaducidades) {
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-        }
-        resultadoRevision?.let { resultado ->
-            Text(
-                text = resultado,
-                color = Color.DarkGray,
-                fontSize = 14.sp,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Button(
-            onClick = verRecetas,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(55.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF2E7D32),
-                contentColor = Color.White
-            ),
-            shape = RoundedCornerShape(15.dp)
-        ) {
-            Text("🍳 Recetas con mis productos", fontSize = 17.sp, fontWeight = FontWeight.Bold)
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Button(
-            onClick = agregarProducto,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(55.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF6750A4),
-                contentColor = Color.White
-            ),
-            shape = RoundedCornerShape(15.dp)
-        ) {
-
-            Text(
-                text = "+ Agregar producto",
-                fontSize = 17.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        TextButton(
-            onClick = cerrarSesion
-        ) {
-
-            Text(
-                text = "Cerrar sesión",
-                color = Color.Gray
-            )
-        }
+      }
     }
+
+    Spacer(modifier = Modifier.height(22.dp))
+
+    // Tarjetas de estado limpias
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+      EstadisticaMiniCard(Modifier.weight(1f), "En orden", conteoSeguros.toString(), StatusSafe)
+      EstadisticaMiniCard(Modifier.weight(1f), "Por vencer", conteoPorVencer.toString(), StatusWarn)
+      EstadisticaMiniCard(Modifier.weight(1f), "Vencidos", conteoVencidos.toString(), StatusDanger)
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    // Acciones principales
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+      Button(
+        onClick = agregarProducto,
+        modifier = Modifier
+          .weight(1f)
+          .height(48.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = AccentDark, contentColor = Color.White),
+        shape = RoundedCornerShape(12.dp)
+      ) {
+        Text(text = "+ Nuevo producto", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+      }
+      OutlinedButton(
+        onClick = verRecetas,
+        modifier = Modifier
+          .weight(1f)
+          .height(48.dp),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, BorderSubtle),
+        colors = ButtonDefaults.outlinedButtonColors(
+          containerColor = SurfaceCard,
+          contentColor = AccentSage
+        )
+      ) {
+        Text(text = "Ver recetas", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+      }
+    }
+
+    Spacer(modifier = Modifier.height(28.dp))
+
+    // Encabezado de lista
+    Row(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalArrangement = Arrangement.SpaceBetween,
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      Text(
+        text = "INVENTARIO (${productos.size})",
+        fontSize = 12.sp,
+        fontWeight = FontWeight.SemiBold,
+        color = TextSecondary,
+        letterSpacing = 0.8.sp
+      )
+      Text(
+        text = if (revisandoCaducidades) "Sincronizando…" else "Verificar alertas",
+        fontSize = 13.sp,
+        fontWeight = FontWeight.Medium,
+        color = AccentSage,
+        modifier = Modifier.clickable(enabled = !revisandoCaducidades) {
+          usuario?.uid?.let { uid ->
+            revisandoCaducidades = true
+            resultadoRevision = ""
+            RevisionManualCaducidad.revisar(context, uid) { mensaje ->
+              revisandoCaducidades = false
+              resultadoRevision = mensaje
+            }
+          }
+        }
+      )
+    }
+
+    if (revisandoCaducidades) {
+      Spacer(modifier = Modifier.height(8.dp))
+      LinearProgressIndicator(
+        modifier = Modifier.fillMaxWidth(),
+        color = AccentDark,
+        trackColor = BorderSubtle
+      )
+    }
+    if (resultadoRevision.isNotBlank()) {
+      Spacer(modifier = Modifier.height(8.dp))
+      Text(text = resultadoRevision, color = TextSecondary, fontSize = 13.sp)
+    }
+
+    Spacer(modifier = Modifier.height(12.dp))
+
+    when {
+      cargando -> {
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 48.dp),
+          contentAlignment = Alignment.Center
+        ) {
+          CircularProgressIndicator(color = TextPrimary, strokeWidth = 2.dp, modifier = Modifier.size(28.dp))
+        }
+      }
+      errorCarga.isNotBlank() -> {
+        Surface(
+          modifier = Modifier.fillMaxWidth(),
+          shape = RoundedCornerShape(16.dp),
+          color = SurfaceCard,
+          border = BorderStroke(1.dp, BorderSubtle)
+        ) {
+          Column(modifier = Modifier.padding(22.dp)) {
+            Text(text = "Error al cargar el inventario", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(text = errorCarga, color = TextSecondary, fontSize = 14.sp)
+          }
+        }
+      }
+      productos.isEmpty() -> {
+        Surface(
+          modifier = Modifier.fillMaxWidth(),
+          shape = RoundedCornerShape(16.dp),
+          color = SurfaceCard,
+          border = BorderStroke(1.dp, BorderSubtle)
+        ) {
+          Column(
+            modifier = Modifier
+              .fillMaxWidth()
+              .padding(vertical = 40.dp, horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+          ) {
+            Text(
+              text = "Sin productos registrados",
+              fontSize = 17.sp,
+              fontWeight = FontWeight.SemiBold,
+              color = TextPrimary
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+              text = "Agrega tu primer artículo mediante código de barras o registro manual.",
+              fontSize = 14.sp,
+              color = TextSecondary,
+              textAlign = TextAlign.Center
+            )
+          }
+        }
+      }
+      else -> {
+        productos.forEach { prod ->
+          TarjetaProducto(
+            producto = prod,
+            editar = { editarProducto(prod) },
+            eliminar = { productoEliminar = prod }
+          )
+          Spacer(modifier = Modifier.height(10.dp))
+        }
+      }
+    }
+  }
 }
 
 // ----------------------------------------------------
-// TARJETA DEL PRODUCTO
+// TARJETA DEL PRODUCTO MINIMALISTA
 // ----------------------------------------------------
 
 @Composable
 fun TarjetaProducto(
-    producto: Map<String, Any>,
-    editar: () -> Unit,
-    eliminar: () -> Unit
+  producto: ProductoMapa,
+  editar: () -> Unit,
+  eliminar: () -> Unit
 ) {
+  val nombre = producto["nombre"]?.toString() ?: "Sin nombre"
+  val categoria = producto["categoria"]?.toString() ?: "General"
+  val cantidad = (producto["cantidad"] as? Number)?.let {
+    if (it.toDouble() % 1.0 == 0.0) it.toLong().toString() else it.toString()
+  } ?: producto["cantidad"]?.toString() ?: "0"
+  val unidadMostrada = producto["unidad"]?.toString() ?: "pzas"
+  val fechaCaducidad = producto["fechaCaducidad"]?.toString().orEmpty()
+  val estado = calcularEstadoCaducidad(fechaCaducidad)
+  val marcaMostrada = producto["marca"]?.toString().orEmpty()
 
-    val nombre =
-        producto["nombre"]?.toString() ?: "Sin nombre"
+  val colorEstado = when (estado) {
+    "Vencido" -> StatusDanger
+    "Próximo a caducar" -> StatusWarn
+    "Caducidad pendiente", "Fecha inválida" -> TextSecondary
+    else -> StatusSafe
+  }
+  val fondoBadge = when (estado) {
+    "Vencido" -> StatusDangerBg
+    "Próximo a caducar" -> StatusWarnBg
+    "Caducidad pendiente", "Fecha inválida" -> SurfaceMuted
+    else -> StatusSafeBg
+  }
 
-    val categoria =
-        producto["categoria"]?.toString() ?: "Sin categoría"
-
-    val cantidad = (producto["cantidad"] as? Number)?.let {
-        if (it.toDouble() % 1.0 == 0.0) it.toLong().toString() else it.toString()
-    } ?: producto["cantidad"]?.toString() ?: "0"
-    val unidadMostrada = producto["unidad"]?.toString() ?: "pzas"
-
-    val fechaCaducidad =
-        producto["fechaCaducidad"]?.toString() ?: ""
-
-    val estado =
-        calcularEstadoCaducidad(fechaCaducidad)
-    val marcaMostrada = producto["marca"]?.toString().orEmpty()
-
-    val colorEstado = when (estado) {
-
-        "Vencido" ->
-            Color(0xFFD32F2F)
-
-        "Próximo a caducar" ->
-            Color(0xFFF57C00)
-
-        "Caducidad pendiente", "Fecha inválida" -> Color.Gray
-
-        else ->
-            Color(0xFF2E7D32)
-    }
-
-    val emojiEstado = when (estado) {
-
-        "Vencido" -> "🔴"
-
-        "Próximo a caducar" -> "🟡"
-
-        "Caducidad pendiente", "Fecha inválida" -> "⚪"
-
-        else -> "🟢"
-    }
-
-    Card(
+  Surface(
+    modifier = Modifier.fillMaxWidth(),
+    shape = RoundedCornerShape(16.dp),
+    color = SurfaceCard,
+    border = BorderStroke(1.dp, BorderSubtle)
+  ) {
+    Column(modifier = Modifier.padding(18.dp)) {
+      Row(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White
-        )
-    ) {
-
-        Column(
-            modifier = Modifier.padding(22.dp)
-        ) {
-
-            Text(
-                text = nombre,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "Categoría: $categoria",
-                fontSize = 16.sp,
-                color = Color.Gray
-            )
-            if (marcaMostrada.isNotBlank()) {
-                Text(
-                    text = "Marca: $marcaMostrada",
-                    fontSize = 14.sp,
-                    color = Color.Gray
-                )
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = "Cantidad: $cantidad $unidadMostrada",
-                fontSize = 16.sp,
-                color = Color.Gray
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = if (fechaCaducidad.isBlank()) "Caducidad: pendiente" else "Caduca: $fechaCaducidad",
-                fontSize = 16.sp,
-                color = Color.Gray
-            )
-
-            Spacer(modifier = Modifier.height(15.dp))
-
-            Text(
-                text = "$emojiEstado $estado",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = colorEstado
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-
-                OutlinedButton(
-                    onClick = editar,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-
-                    Text(
-                        text = "✏️ Editar",
-                        color = Color(0xFF6750A4),
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                OutlinedButton(
-                    onClick = eliminar,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-
-                    Text(
-                        text = "🗑️ Eliminar",
-                        color = Color(0xFFD32F2F),
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top
+      ) {
+        Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+          Text(
+            text = nombre,
+            fontSize = 17.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = TextPrimary
+          )
+          Spacer(modifier = Modifier.height(2.dp))
+          val subtitulo = if (marcaMostrada.isNotBlank()) "$categoria · $marcaMostrada" else categoria
+          Text(
+            text = subtitulo,
+            fontSize = 13.sp,
+            color = TextSecondary
+          )
         }
+
+        // Píldora minimalista con punto de color
+        Row(
+          modifier = Modifier
+            .clip(RoundedCornerShape(99.dp))
+            .background(fondoBadge)
+            .padding(horizontal = 10.dp, vertical = 5.dp),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Box(
+            modifier = Modifier
+              .size(6.dp)
+              .clip(CircleShape)
+              .background(colorEstado)
+          )
+          Spacer(modifier = Modifier.width(6.dp))
+          Text(
+            text = estado,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = colorEstado
+          )
+        }
+      }
+
+      Spacer(modifier = Modifier.height(14.dp))
+      HorizontalDivider(color = SurfaceMuted)
+      Spacer(modifier = Modifier.height(10.dp))
+
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+          Column {
+            Text(text = "CANTIDAD", fontSize = 10.sp, color = TextSecondary, fontWeight = FontWeight.Medium)
+            Text(text = "$cantidad $unidadMostrada", fontSize = 13.sp, color = TextPrimary, fontWeight = FontWeight.SemiBold)
+          }
+          Column {
+            Text(text = "VENCIMIENTO", fontSize = 10.sp, color = TextSecondary, fontWeight = FontWeight.Medium)
+            Text(
+              text = if (fechaCaducidad.isBlank()) "Pendiente" else fechaCaducidad,
+              fontSize = 13.sp,
+              color = TextPrimary,
+              fontWeight = FontWeight.SemiBold
+            )
+          }
+        }
+
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+          TextButton(
+            onClick = editar,
+            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+          ) {
+            Text(text = "Editar", fontSize = 13.sp, color = TextPrimary, fontWeight = FontWeight.Medium)
+          }
+          TextButton(
+            onClick = eliminar,
+            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+          ) {
+            Text(text = "Eliminar", fontSize = 13.sp, color = StatusDanger, fontWeight = FontWeight.Medium)
+          }
+        }
+      }
     }
+  }
 }
 
-// ----------------------------------------------------
-// CALCULAR ESTADO
-// ----------------------------------------------------
-
 fun calcularEstadoCaducidad(fechaCaducidad: String): String {
-    if (fechaCaducidad.isBlank()) return "Caducidad pendiente"
-    val dias = FechasCaducidad.diasRestantes(fechaCaducidad) ?: return "Fecha inválida"
-    return when {
-        dias < 0 -> "Vencido"
-        dias <= 7 -> "Próximo a caducar"
-        else -> "Seguro"
-    }
+  if (fechaCaducidad.isBlank()) return "Caducidad pendiente"
+  val dias = FechasCaducidad.diasRestantes(fechaCaducidad) ?: return "Fecha inválida"
+  return when {
+    dias < 0 -> "Vencido"
+    dias <= 7 -> "Próximo a caducar"
+    else -> "Seguro"
+  }
 }
 
 // ----------------------------------------------------
@@ -1390,403 +1461,221 @@ fun calcularEstadoCaducidad(fechaCaducidad: String): String {
 // ----------------------------------------------------
 
 @Composable
-fun PantallaAgregarProducto(
-    regresar: () -> Unit,
-    productoGuardado: () -> Unit
-) {
+fun PantallaAgregarProducto(regresar: () -> Unit, productoGuardado: () -> Unit) {
+  var nombre by remember { mutableStateOf("") }
+  var categoria by remember { mutableStateOf("Alimentos") }
+  var marca by remember { mutableStateOf("") }
+  var codigoBarras by remember { mutableStateOf("") }
+  var cantidad by remember { mutableStateOf("1") }
+  var unidad by remember { mutableStateOf("pzas") }
+  var fechaCaducidad by remember { mutableStateOf("") }
+  var cargando by remember { mutableStateOf(false) }
 
-    var nombre by remember { mutableStateOf("") }
-    var categoria by remember { mutableStateOf("Sin categoría") }
-    var marca by remember { mutableStateOf("") }
-    var codigoBarras by remember { mutableStateOf("") }
-    var cantidad by remember { mutableStateOf("1") }
-    var unidad by remember { mutableStateOf("pzas") }
-    var fechaCaducidad by remember { mutableStateOf("") }
-    var cargando by remember { mutableStateOf(false) }
+  val context = LocalContext.current
+  val auth = FirebaseAuth.getInstance()
+  val db = FirebaseFirestore.getInstance()
+  val calendario = Calendar.getInstance()
 
-    val context = LocalContext.current
+  val selectorFecha = DatePickerDialog(
+    context,
+    { _, year, month, day ->
+      val fechaSeleccionada = Calendar.getInstance()
+      fechaSeleccionada.set(year, month, day)
+      fechaCaducidad = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(fechaSeleccionada.time)
+    },
+    calendario.get(Calendar.YEAR),
+    calendario.get(Calendar.MONTH),
+    calendario.get(Calendar.DAY_OF_MONTH)
+  )
 
-    val auth = FirebaseAuth.getInstance()
-    val db = FirebaseFirestore.getInstance()
+  Column(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(BgPrimary)
+      .verticalScroll(rememberScrollState())
+      .padding(horizontal = 24.dp)
+      .padding(top = 56.dp, bottom = 40.dp)
+  ) {
+    CabeceraNavegacion(titulo = "Nuevo producto", onRegresar = regresar)
 
-    val calendario = Calendar.getInstance()
-
-    val selectorFecha = DatePickerDialog(
-        context,
-        { _, year, month, day ->
-
-            val fechaSeleccionada =
-                Calendar.getInstance()
-
-            fechaSeleccionada.set(
-                year,
-                month,
-                day
-            )
-
-            val formato =
-                SimpleDateFormat(
-                    "dd/MM/yyyy",
-                    Locale.getDefault()
-                )
-
-            fechaCaducidad =
-                formato.format(
-                    fechaSeleccionada.time
-                )
-        },
-        calendario.get(Calendar.YEAR),
-        calendario.get(Calendar.MONTH),
-        calendario.get(Calendar.DAY_OF_MONTH)
-    )
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF7F5FA))
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp)
-            .padding(top = 60.dp, bottom = 40.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+    Surface(
+      modifier = Modifier.fillMaxWidth(),
+      shape = RoundedCornerShape(16.dp),
+      color = SurfaceCard,
+      border = BorderStroke(1.dp, BorderSubtle)
     ) {
-
+      Column(modifier = Modifier.padding(18.dp)) {
         Text(
-            text = "ExpiryAlert",
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF6750A4)
+          text = "CAPTURA ASISTIDA",
+          fontSize = 11.sp,
+          fontWeight = FontWeight.SemiBold,
+          color = TextSecondary,
+          letterSpacing = 0.8.sp
         )
-
-        Spacer(modifier = Modifier.height(30.dp))
-
-        Text(
-            text = "Agregar producto",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = "Escanea el producto o regístralo manualmente",
-            fontSize = 16.sp,
-            color = Color.Gray
-        )
-
-        Spacer(modifier = Modifier.height(18.dp))
-
-        EscanerCodigoProducto { codigo, datos ->
-            codigoBarras = codigo
-            if (datos != null) {
-                if (datos.nombre.isNotBlank()) nombre = datos.nombre
-                marca = datos.marca
-                categoria = datos.categoria.ifBlank { "Alimentos" }
-                if (datos.cantidad.isNotBlank()) {
-                    cantidad = datos.cantidad
-                    unidad = datos.unidad.ifBlank { "pzas" }
-                }
-            }
-        }
-
-        Text(
-            "Catálogo de productos: Open Food Facts (licencia ODbL). " +
-                "Verifica nombre, presentación y cantidad antes de guardar.",
-            style = MaterialTheme.typography.bodySmall
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-        HorizontalDivider()
-        Spacer(modifier = Modifier.height(12.dp))
-
-        CapturaOCRProducto { fecha, cantidadDetectada, unidadDetectada ->
-            if (fecha.isNotBlank()) fechaCaducidad = fecha
-            if (cantidadDetectada.isNotBlank()) {
-                cantidad = cantidadDetectada
-                unidad = unidadDetectada.ifBlank { unidad }
-            }
-            Toast.makeText(context, "Datos de etiqueta aplicados. Revisa y guarda.", Toast.LENGTH_LONG).show()
-        }
-
-        Spacer(modifier = Modifier.height(30.dp))
-
-        OutlinedTextField(
-            value = nombre,
-            onValueChange = {
-                nombre = it
-            },
-            label = {
-                Text("Nombre del producto")
-            },
-            placeholder = {
-                Text("Ejemplo: Leche")
-            },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-
-        Spacer(modifier = Modifier.height(15.dp))
-
-        OutlinedTextField(
-            value = categoria,
-            onValueChange = {
-                categoria = it
-            },
-            label = {
-                Text("Categoría")
-            },
-            placeholder = {
-                Text("Ejemplo: Lácteos")
-            },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-
-        Spacer(modifier = Modifier.height(15.dp))
-
-        OutlinedTextField(
-            value = marca,
-            onValueChange = { marca = it },
-            label = { Text("Marca (opcional)") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-
-        Spacer(modifier = Modifier.height(15.dp))
-
-        OutlinedTextField(
-            value = cantidad,
-            onValueChange = { nuevoValor ->
-
-                val limpio = nuevoValor.replace(',', '.')
-                if (limpio.matches(Regex("""\d*(?:\.\d{0,3})?"""))) {
-                    cantidad = limpio
-                }
-            },
-            label = {
-                Text("Cantidad")
-            },
-            placeholder = {
-                Text("Ejemplo: 2")
-            },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Decimal
-            )
-        )
-
-        Spacer(modifier = Modifier.height(15.dp))
-
-        OutlinedTextField(
-            value = unidad,
-            onValueChange = { unidad = it },
-            label = { Text("Unidad (pzas, g, kg, ml, L)") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-
-        Spacer(modifier = Modifier.height(15.dp))
-
-        OutlinedTextField(
-            value = fechaCaducidad,
-            onValueChange = {},
-            readOnly = true,
-            label = {
-                Text("Fecha de caducidad (opcional)")
-            },
-            placeholder = {
-                Text("Selecciona una fecha")
-            },
-            modifier = Modifier.fillMaxWidth()
-        )
-
         Spacer(modifier = Modifier.height(10.dp))
-
-        OutlinedButton(
-            onClick = {
-                selectorFecha.show()
-            },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(15.dp)
-        ) {
-
-            Text(
-                text = "📅 Seleccionar fecha",
-                color = Color(0xFF6750A4)
-            )
-        }
-
-        if (fechaCaducidad.isBlank()) {
-            Text(
-                "Puedes guardar sin caducidad y agregarla después. " +
-                    "Hasta entonces no se programarán alertas para este producto.",
-                style = MaterialTheme.typography.bodySmall
-            )
-        } else {
-            TextButton(onClick = { fechaCaducidad = "" }) { Text("Dejar caducidad pendiente") }
-        }
-
-        Spacer(modifier = Modifier.height(30.dp))
-
-        Button(
-            onClick = {
-
-                val usuario =
-                    auth.currentUser
-
-                when {
-
-                    usuario == null -> {
-
-                        Toast.makeText(
-                            context,
-                            "No hay una sesión iniciada",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-
-                    nombre.isBlank() -> {
-
-                        Toast.makeText(
-                            context,
-                            "Escribe el nombre del producto",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-
-                    categoria.isBlank() -> {
-
-                        Toast.makeText(
-                            context,
-                            "Escribe una categoría",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-
-                    cantidad.isBlank() -> {
-
-                        Toast.makeText(
-                            context,
-                            "Escribe la cantidad",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-
-                    cantidad.toDoubleOrNull()?.let { it > 0.0 && it.isFinite() } != true -> {
-
-                        Toast.makeText(
-                            context,
-                            "La cantidad debe ser mayor que 0",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-
-                    unidad.isBlank() -> {
-                        Toast.makeText(context, "Escribe una unidad", Toast.LENGTH_SHORT).show()
-                    }
-
-                    fechaCaducidad.isNotBlank() && FechasCaducidad.diasRestantes(fechaCaducidad) == null -> {
-
-                        Toast.makeText(
-                            context,
-                            "Fecha inválida. Corrígela o déjala pendiente.",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-
-                    else -> {
-
-                        cargando = true
-
-                        val producto =
-                            hashMapOf(
-                                "nombre" to nombre.trim(),
-                                "categoria" to categoria.trim(),
-                                "marca" to marca.trim(),
-                                "codigoBarras" to codigoBarras,
-                                "cantidad" to cantidad.toDouble(),
-                                "cantidadInicial" to cantidad.toDouble(),
-                                "unidad" to unidad.trim(),
-                                "fechaCaducidad" to fechaCaducidad,
-                                "caducidadPendiente" to fechaCaducidad.isBlank(),
-                                "usuarioId" to usuario.uid,
-                                "correoUsuario" to (usuario.email ?: ""),
-                                "fechaCreacion" to Timestamp.now()
-                            )
-
-                        db.collection("productos")
-                            .add(producto)
-                            .addOnSuccessListener {
-
-                                // Revisión inmediata con la app abierta; WorkManager sigue
-                                // realizando la revisión periódica en segundo plano.
-                                if (fechaCaducidad.isNotBlank()) {
-                                    RevisionManualCaducidad.revisar(context, usuario.uid)
-                                }
-                                cargando = false
-
-                                Toast.makeText(
-                                    context,
-                                    "Producto guardado correctamente",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-
-                                productoGuardado()
-                            }
-                            .addOnFailureListener { error ->
-
-                                cargando = false
-
-                                Toast.makeText(
-                                    context,
-                                    "Error al guardar: ${error.localizedMessage}",
-                                    Toast.LENGTH_LONG
-                                ).show()
-                            }
-                    }
-                }
-            },
-            enabled = !cargando,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(55.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF6750A4),
-                contentColor = Color.White
-            ),
-            shape = RoundedCornerShape(15.dp)
-        ) {
-
-            if (cargando) {
-
-                CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp),
-                    color = Color.White,
-                    strokeWidth = 2.dp
-                )
-
-            } else {
-
-                Text(
-                    text = "Guardar producto",
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold
-                )
+        EscanerCodigoProducto { codigo, datos ->
+          codigoBarras = codigo
+          if (datos != null) {
+            if (datos.nombre.isNotBlank()) nombre = datos.nombre
+            marca = datos.marca
+            categoria = datos.categoria.ifBlank { "Alimentos" }
+            if (datos.cantidad.isNotBlank()) {
+              cantidad = datos.cantidad
+              unidad = datos.unidad.ifBlank { "pzas" }
             }
+          }
         }
-
-        Spacer(modifier = Modifier.height(15.dp))
-
-        TextButton(
-            onClick = regresar
-        ) {
-
-            Text(
-                text = "← Volver",
-                color = Color.Gray
-            )
+        Spacer(modifier = Modifier.height(8.dp))
+        CapturaOCRProducto { fecha, cantidadDetectada, unidadDetectada ->
+          if (fecha.isNotBlank()) fechaCaducidad = fecha
+          if (cantidadDetectada.isNotBlank()) {
+            cantidad = cantidadDetectada
+            unidad = unidadDetectada.ifBlank { unidad }
+          }
+          Toast.makeText(context, "Datos aplicados. Revisa y guarda.", Toast.LENGTH_LONG).show()
         }
+      }
     }
+
+    Spacer(modifier = Modifier.height(18.dp))
+
+    Surface(
+      modifier = Modifier.fillMaxWidth(),
+      shape = RoundedCornerShape(16.dp),
+      color = SurfaceCard,
+      border = BorderStroke(1.dp, BorderSubtle)
+    ) {
+      Column(modifier = Modifier.padding(20.dp)) {
+        CampoTextoMinimalista(
+          value = nombre,
+          onValueChange = { nombre = it },
+          label = "Nombre del producto",
+          placeholder = "Ej. Leche entera"
+        )
+        Spacer(modifier = Modifier.height(14.dp))
+        CampoTextoMinimalista(
+          value = categoria,
+          onValueChange = { categoria = it },
+          label = "Categoría",
+          placeholder = "Ej. Lácteos"
+        )
+        Spacer(modifier = Modifier.height(14.dp))
+        CampoTextoMinimalista(
+          value = marca,
+          onValueChange = { marca = it },
+          label = "Marca (opcional)",
+          placeholder = "Ej. Alpura"
+        )
+        Spacer(modifier = Modifier.height(14.dp))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+          Box(modifier = Modifier.weight(1f)) {
+            CampoTextoMinimalista(
+              value = cantidad,
+              onValueChange = { nuevoValor ->
+                val limpio = nuevoValor.replace(',', '.')
+                if (limpio.matches(Regex("""\d*(?:\.\d{0,3})?"""))) cantidad = limpio
+              },
+              label = "Cantidad",
+              keyboardType = KeyboardType.Decimal
+            )
+          }
+          Box(modifier = Modifier.weight(1f)) {
+            CampoTextoMinimalista(
+              value = unidad,
+              onValueChange = { unidad = it },
+              label = "Unidad",
+              placeholder = "pzas, g, ml"
+            )
+          }
+        }
+        Spacer(modifier = Modifier.height(14.dp))
+        CampoTextoMinimalista(
+          value = fechaCaducidad,
+          onValueChange = {},
+          readOnly = true,
+          label = "Fecha de caducidad",
+          placeholder = "Sin fecha seleccionada"
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+          OutlinedButton(
+            onClick = { selectorFecha.show() },
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(10.dp),
+            border = BorderStroke(1.dp, BorderSubtle)
+          ) {
+            Text(text = "Elegir fecha", color = TextPrimary, fontSize = 13.sp)
+          }
+          if (fechaCaducidad.isNotBlank()) {
+            TextButton(onClick = { fechaCaducidad = "" }) {
+              Text("Limpiar", color = TextSecondary, fontSize = 13.sp)
+            }
+          }
+        }
+      }
+    }
+
+    Spacer(modifier = Modifier.height(22.dp))
+
+    Button(
+      onClick = {
+        val usuario = auth.currentUser
+        when {
+          usuario == null -> Toast.makeText(context, "No hay una sesión iniciada", Toast.LENGTH_SHORT).show()
+          nombre.isBlank() -> Toast.makeText(context, "Escribe el nombre del producto", Toast.LENGTH_SHORT).show()
+          categoria.isBlank() -> Toast.makeText(context, "Escribe una categoría", Toast.LENGTH_SHORT).show()
+          cantidad.isBlank() -> Toast.makeText(context, "Escribe la cantidad", Toast.LENGTH_SHORT).show()
+          cantidad.toDoubleOrNull()?.let { it > 0.0 && it.isFinite() } != true ->
+            Toast.makeText(context, "La cantidad debe ser mayor que 0", Toast.LENGTH_SHORT).show()
+          unidad.isBlank() -> Toast.makeText(context, "Escribe una unidad", Toast.LENGTH_SHORT).show()
+          fechaCaducidad.isNotBlank() && FechasCaducidad.diasRestantes(fechaCaducidad) == null ->
+            Toast.makeText(context, "Fecha inválida.", Toast.LENGTH_SHORT).show()
+          else -> {
+            cargando = true
+            val producto = hashMapOf(
+              "nombre" to nombre.trim(),
+              "categoria" to categoria.trim(),
+              "marca" to marca.trim(),
+              "codigoBarras" to codigoBarras,
+              "cantidad" to cantidad.toDouble(),
+              "cantidadInicial" to cantidad.toDouble(),
+              "unidad" to unidad.trim(),
+              "fechaCaducidad" to fechaCaducidad,
+              "caducidadPendiente" to fechaCaducidad.isBlank(),
+              "usuarioId" to usuario.uid,
+              "correoUsuario" to (usuario.email ?: ""),
+              "fechaCreacion" to Timestamp.now()
+            )
+            db.collection("productos").add(producto)
+              .addOnSuccessListener {
+                if (fechaCaducidad.isNotBlank()) {
+                  RevisionManualCaducidad.revisar(context, usuario.uid)
+                }
+                cargando = false
+                Toast.makeText(context, "Producto guardado", Toast.LENGTH_SHORT).show()
+                productoGuardado()
+              }
+              .addOnFailureListener { err ->
+                cargando = false
+                Toast.makeText(context, "Error: ${err.localizedMessage}", Toast.LENGTH_LONG).show()
+              }
+          }
+        }
+      },
+      enabled = !cargando,
+      modifier = Modifier
+        .fillMaxWidth()
+        .height(52.dp),
+      colors = ButtonDefaults.buttonColors(containerColor = AccentDark, contentColor = Color.White),
+      shape = RoundedCornerShape(12.dp)
+    ) {
+      if (cargando) {
+        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+      } else {
+        Text(text = "Guardar en inventario", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+      }
+    }
+  }
 }
 
 // ----------------------------------------------------
@@ -1795,589 +1684,323 @@ fun PantallaAgregarProducto(
 
 @Composable
 fun PantallaEditarProducto(
-    producto: Map<String, Any>,
-    regresar: () -> Unit,
-    productoActualizado: () -> Unit
+  producto: ProductoMapa,
+  regresar: () -> Unit,
+  productoActualizado: () -> Unit
 ) {
+  val context = LocalContext.current
+  val db = FirebaseFirestore.getInstance()
+  val usuario = FirebaseAuth.getInstance().currentUser
+  val idProducto = producto["id"]?.toString().orEmpty()
 
-    val context = LocalContext.current
-    val db = FirebaseFirestore.getInstance()
-    val usuario = FirebaseAuth.getInstance().currentUser
+  var nombre by remember(producto) { mutableStateOf(producto["nombre"]?.toString().orEmpty()) }
+  var categoria by remember(producto) { mutableStateOf(producto["categoria"]?.toString().orEmpty()) }
+  var cantidad by remember(producto) { mutableStateOf(producto["cantidad"]?.toString().orEmpty()) }
+  var unidad by remember(producto) { mutableStateOf(producto["unidad"]?.toString() ?: "pzas") }
+  var marca by remember(producto) { mutableStateOf(producto["marca"]?.toString().orEmpty()) }
+  var codigoBarras by remember(producto) { mutableStateOf(producto["codigoBarras"]?.toString().orEmpty()) }
+  var fechaCaducidad by remember(producto) { mutableStateOf(producto["fechaCaducidad"]?.toString().orEmpty()) }
+  var cargando by remember { mutableStateOf(false) }
 
-    val idProducto =
-        producto["id"]?.toString() ?: ""
+  val calendario = Calendar.getInstance()
+  try {
+    val formato = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    formato.isLenient = false
+    formato.parse(fechaCaducidad)?.let { calendario.time = it }
+  } catch (_: Exception) {
+  }
 
-    var nombre by remember(producto) {
-        mutableStateOf(
-            producto["nombre"]?.toString() ?: ""
-        )
-    }
+  val selectorFecha = DatePickerDialog(
+    context,
+    { _, year, month, day ->
+      val fechaSeleccionada = Calendar.getInstance()
+      fechaSeleccionada.set(year, month, day)
+      fechaCaducidad = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(fechaSeleccionada.time)
+    },
+    calendario.get(Calendar.YEAR),
+    calendario.get(Calendar.MONTH),
+    calendario.get(Calendar.DAY_OF_MONTH)
+  )
 
-    var categoria by remember(producto) {
-        mutableStateOf(
-            producto["categoria"]?.toString() ?: ""
-        )
-    }
+  Column(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(BgPrimary)
+      .verticalScroll(rememberScrollState())
+      .padding(horizontal = 24.dp)
+      .padding(top = 56.dp, bottom = 40.dp)
+  ) {
+    CabeceraNavegacion(titulo = "Editar producto", onRegresar = regresar)
 
-    var cantidad by remember(producto) {
-        mutableStateOf(
-            producto["cantidad"]?.toString() ?: ""
-        )
-    }
-
-    var unidad by remember(producto) {
-        mutableStateOf(producto["unidad"]?.toString() ?: "pzas")
-    }
-
-    var marca by remember(producto) {
-        mutableStateOf(producto["marca"]?.toString().orEmpty())
-    }
-
-    var codigoBarras by remember(producto) {
-        mutableStateOf(producto["codigoBarras"]?.toString().orEmpty())
-    }
-
-    var fechaCaducidad by remember(producto) {
-        mutableStateOf(
-            producto["fechaCaducidad"]?.toString() ?: ""
-        )
-    }
-
-    var cargando by remember {
-        mutableStateOf(false)
-    }
-
-    val calendario =
-        Calendar.getInstance()
-
-    // Intentamos iniciar el calendario en la fecha actual del producto.
-    try {
-
-        val formato =
-            SimpleDateFormat(
-                "dd/MM/yyyy",
-                Locale.getDefault()
-            )
-
-        formato.isLenient = false
-
-        val fecha =
-            formato.parse(fechaCaducidad)
-
-        if (fecha != null) {
-            calendario.time = fecha
-        }
-
-    } catch (_: Exception) {
-    }
-
-    val selectorFecha =
-        DatePickerDialog(
-            context,
-            { _, year, month, day ->
-
-                val fechaSeleccionada =
-                    Calendar.getInstance()
-
-                fechaSeleccionada.set(
-                    year,
-                    month,
-                    day
-                )
-
-                val formato =
-                    SimpleDateFormat(
-                        "dd/MM/yyyy",
-                        Locale.getDefault()
-                    )
-
-                fechaCaducidad =
-                    formato.format(
-                        fechaSeleccionada.time
-                    )
-            },
-            calendario.get(Calendar.YEAR),
-            calendario.get(Calendar.MONTH),
-            calendario.get(Calendar.DAY_OF_MONTH)
-        )
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF7F5FA))
-            .verticalScroll(
-                rememberScrollState()
-            )
-            .padding(horizontal = 24.dp)
-            .padding(
-                top = 60.dp,
-                bottom = 40.dp
-            ),
-        horizontalAlignment =
-            Alignment.CenterHorizontally
+    Surface(
+      modifier = Modifier.fillMaxWidth(),
+      shape = RoundedCornerShape(16.dp),
+      color = SurfaceCard,
+      border = BorderStroke(1.dp, BorderSubtle)
     ) {
-
-        Text(
-            text = "ExpiryAlert",
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF6750A4)
+      Column(modifier = Modifier.padding(20.dp)) {
+        CampoTextoMinimalista(
+          value = nombre,
+          onValueChange = { nombre = it },
+          label = "Nombre del producto"
         )
-
-        Spacer(
-            modifier = Modifier.height(30.dp)
+        Spacer(modifier = Modifier.height(14.dp))
+        CampoTextoMinimalista(
+          value = categoria,
+          onValueChange = { categoria = it },
+          label = "Categoría"
         )
-
-        Text(
-            text = "Editar producto",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold
+        Spacer(modifier = Modifier.height(14.dp))
+        CampoTextoMinimalista(
+          value = marca,
+          onValueChange = { marca = it },
+          label = "Marca (opcional)"
         )
-
-        Spacer(
-            modifier = Modifier.height(8.dp)
-        )
-
-        Text(
-            text = "Modifica los datos del producto",
-            fontSize = 16.sp,
-            color = Color.Gray
-        )
-
-        Spacer(
-            modifier = Modifier.height(30.dp)
-        )
-
-        OutlinedTextField(
-            value = nombre,
-            onValueChange = {
-                nombre = it
-            },
-            label = {
-                Text("Nombre del producto")
-            },
-            modifier =
-                Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-
-        Spacer(
-            modifier = Modifier.height(15.dp)
-        )
-
-        OutlinedTextField(
-            value = categoria,
-            onValueChange = {
-                categoria = it
-            },
-            label = {
-                Text("Categoría")
-            },
-            modifier =
-                Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-
-        Spacer(modifier = Modifier.height(15.dp))
-
-        OutlinedTextField(
-            value = marca,
-            onValueChange = { marca = it },
-            label = { Text("Marca (opcional)") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-
-        Spacer(modifier = Modifier.height(15.dp))
-
-        OutlinedTextField(
-            value = cantidad,
-            onValueChange = { nuevoValor ->
-
+        Spacer(modifier = Modifier.height(14.dp))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+          Box(modifier = Modifier.weight(1f)) {
+            CampoTextoMinimalista(
+              value = cantidad,
+              onValueChange = { nuevoValor ->
                 val limpio = nuevoValor.replace(',', '.')
-                if (limpio.matches(Regex("""\d*(?:\.\d{0,3})?"""))) {
-                    cantidad = limpio
-                }
-            },
-            label = {
-                Text("Cantidad")
-            },
-            modifier =
-                Modifier.fillMaxWidth(),
-            singleLine = true,
-            keyboardOptions =
-                KeyboardOptions(
-                    keyboardType =
-                        KeyboardType.Decimal
-                )
-        )
-
-        Spacer(modifier = Modifier.height(15.dp))
-
-        OutlinedTextField(
-            value = unidad,
-            onValueChange = { unidad = it },
-            label = { Text("Unidad (pzas, g, kg, ml, L)") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-
-        Spacer(
-            modifier = Modifier.height(15.dp)
-        )
-
-        OutlinedTextField(
-            value = fechaCaducidad,
-            onValueChange = {},
-            readOnly = true,
-            label = {
-                Text("Fecha de caducidad (opcional)")
-            },
-            modifier =
-                Modifier.fillMaxWidth()
-        )
-
-        Spacer(
-            modifier = Modifier.height(10.dp)
-        )
-
-        OutlinedButton(
-            onClick = {
-                selectorFecha.show()
-            },
-            modifier =
-                Modifier.fillMaxWidth(),
-            shape =
-                RoundedCornerShape(15.dp)
-        ) {
-
-            Text(
-                text = "📅 Cambiar fecha",
-                color = Color(0xFF6750A4)
+                if (limpio.matches(Regex("""\d*(?:\.\d{0,3})?"""))) cantidad = limpio
+              },
+              label = "Cantidad",
+              keyboardType = KeyboardType.Decimal
             )
+          }
+          Box(modifier = Modifier.weight(1f)) {
+            CampoTextoMinimalista(
+              value = unidad,
+              onValueChange = { unidad = it },
+              label = "Unidad"
+            )
+          }
         }
-
-        if (fechaCaducidad.isBlank()) {
-            Text(
-                "Sin fecha todavía: este producto no generará alertas de caducidad.",
-                style = MaterialTheme.typography.bodySmall
-            )
-        } else {
+        Spacer(modifier = Modifier.height(14.dp))
+        CampoTextoMinimalista(
+          value = fechaCaducidad,
+          onValueChange = {},
+          readOnly = true,
+          label = "Fecha de caducidad",
+          placeholder = "Pendiente"
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+          OutlinedButton(
+            onClick = { selectorFecha.show() },
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(10.dp),
+            border = BorderStroke(1.dp, BorderSubtle)
+          ) {
+            Text(text = "Cambiar fecha", color = TextPrimary, fontSize = 13.sp)
+          }
+          if (fechaCaducidad.isNotBlank()) {
             TextButton(onClick = { fechaCaducidad = "" }) {
-                Text("Dejar caducidad pendiente")
+              Text("Dejar pendiente", color = TextSecondary, fontSize = 13.sp)
             }
+          }
         }
-
-        Spacer(
-            modifier = Modifier.height(30.dp)
-        )
-
-        Button(
-            onClick = {
-
-                when {
-
-                    usuario == null -> {
-
-                        Toast.makeText(
-                            context,
-                            "No hay una sesión iniciada",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-
-                    idProducto.isBlank() -> {
-
-                        Toast.makeText(
-                            context,
-                            "No se encontró el producto",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-
-                    nombre.isBlank() -> {
-
-                        Toast.makeText(
-                            context,
-                            "Escribe el nombre del producto",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-
-                    categoria.isBlank() -> {
-
-                        Toast.makeText(
-                            context,
-                            "Escribe una categoría",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-
-                    cantidad.isBlank() -> {
-
-                        Toast.makeText(
-                            context,
-                            "Escribe la cantidad",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-
-                    cantidad.toDoubleOrNull()?.let { it > 0.0 && it.isFinite() } != true -> {
-
-                        Toast.makeText(
-                            context,
-                            "La cantidad debe ser mayor que 0",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-
-                    unidad.isBlank() -> {
-                        Toast.makeText(context, "Escribe una unidad", Toast.LENGTH_SHORT).show()
-                    }
-
-                    fechaCaducidad.isNotBlank() && FechasCaducidad.diasRestantes(fechaCaducidad) == null -> {
-
-                        Toast.makeText(
-                            context,
-                            "Fecha inválida. Corrígela o déjala pendiente.",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-
-                    else -> {
-
-                        cargando = true
-
-                        val cambios =
-                            hashMapOf<String, Any>(
-                                "nombre" to nombre.trim(),
-                                "categoria" to categoria.trim(),
-                                "marca" to marca.trim(),
-                                "codigoBarras" to codigoBarras,
-                                "cantidad" to cantidad.toDouble(),
-                                "unidad" to unidad.trim(),
-                                "fechaCaducidad" to fechaCaducidad,
-                                "caducidadPendiente" to fechaCaducidad.isBlank(),
-                                "usuarioId" to usuario.uid,
-                                "correoUsuario" to (usuario.email ?: "")
-                            )
-
-                        db.collection("productos")
-                            .document(idProducto)
-                            .update(cambios)
-                            .addOnSuccessListener {
-
-                                // Cancelar avisos obsoletos y comprobar la nueva fecha.
-                                NotificationHelper.cancelarAlerta(context, usuario.uid, idProducto)
-                                if (fechaCaducidad.isNotBlank()) {
-                                    RevisionManualCaducidad.revisar(context, usuario.uid)
-                                }
-                                cargando = false
-
-                                Toast.makeText(
-                                    context,
-                                    "Producto actualizado correctamente",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-
-                                productoActualizado()
-                            }
-                            .addOnFailureListener { error ->
-
-                                cargando = false
-
-                                Toast.makeText(
-                                    context,
-                                    "Error al actualizar: ${error.localizedMessage}",
-                                    Toast.LENGTH_LONG
-                                ).show()
-                            }
-                    }
-                }
-            },
-
-            enabled = !cargando,
-
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(55.dp),
-
-            colors =
-                ButtonDefaults.buttonColors(
-                    containerColor =
-                        Color(0xFF6750A4),
-                    contentColor =
-                        Color.White
-                ),
-
-            shape =
-                RoundedCornerShape(15.dp)
-        ) {
-
-            if (cargando) {
-
-                CircularProgressIndicator(
-                    modifier =
-                        Modifier.size(24.dp),
-                    color = Color.White,
-                    strokeWidth = 2.dp
-                )
-
-            } else {
-
-                Text(
-                    text = "Guardar cambios",
-                    fontSize = 17.sp,
-                    fontWeight =
-                        FontWeight.Bold
-                )
-            }
-        }
-
-        Spacer(
-            modifier = Modifier.height(15.dp)
-        )
-
-        TextButton(
-            onClick = regresar
-        ) {
-
-            Text(
-                text = "← Cancelar",
-                color = Color.Gray
-            )
-        }
+      }
     }
+
+    Spacer(modifier = Modifier.height(22.dp))
+
+    Button(
+      onClick = {
+        when {
+          usuario == null -> Toast.makeText(context, "No hay una sesión iniciada", Toast.LENGTH_SHORT).show()
+          idProducto.isBlank() -> Toast.makeText(context, "No se encontró el producto", Toast.LENGTH_SHORT).show()
+          nombre.isBlank() -> Toast.makeText(context, "Escribe el nombre del producto", Toast.LENGTH_SHORT).show()
+          categoria.isBlank() -> Toast.makeText(context, "Escribe una categoría", Toast.LENGTH_SHORT).show()
+          cantidad.isBlank() -> Toast.makeText(context, "Escribe la cantidad", Toast.LENGTH_SHORT).show()
+          cantidad.toDoubleOrNull()?.let { it > 0.0 && it.isFinite() } != true ->
+            Toast.makeText(context, "La cantidad debe ser mayor que 0", Toast.LENGTH_SHORT).show()
+          unidad.isBlank() -> Toast.makeText(context, "Escribe una unidad", Toast.LENGTH_SHORT).show()
+          fechaCaducidad.isNotBlank() && FechasCaducidad.diasRestantes(fechaCaducidad) == null ->
+            Toast.makeText(context, "Fecha inválida.", Toast.LENGTH_SHORT).show()
+          else -> {
+            cargando = true
+            val cambios = mapOf(
+              "nombre" to nombre.trim(),
+              "categoria" to categoria.trim(),
+              "marca" to marca.trim(),
+              "codigoBarras" to codigoBarras,
+              "cantidad" to cantidad.toDouble(),
+              "unidad" to unidad.trim(),
+              "fechaCaducidad" to fechaCaducidad,
+              "caducidadPendiente" to fechaCaducidad.isBlank(),
+              "usuarioId" to usuario.uid,
+              "correoUsuario" to (usuario.email ?: "")
+            )
+            db.collection("productos").document(idProducto).update(cambios)
+              .addOnSuccessListener {
+                NotificationHelper.cancelarAlerta(context, usuario.uid, idProducto)
+                if (fechaCaducidad.isNotBlank()) {
+                  RevisionManualCaducidad.revisar(context, usuario.uid)
+                }
+                cargando = false
+                Toast.makeText(context, "Cambios guardados", Toast.LENGTH_SHORT).show()
+                productoActualizado()
+              }
+              .addOnFailureListener { err ->
+                cargando = false
+                Toast.makeText(context, "Error: ${err.localizedMessage}", Toast.LENGTH_LONG).show()
+              }
+          }
+        }
+      },
+      enabled = !cargando,
+      modifier = Modifier
+        .fillMaxWidth()
+        .height(52.dp),
+      colors = ButtonDefaults.buttonColors(containerColor = AccentDark, contentColor = Color.White),
+      shape = RoundedCornerShape(12.dp)
+    ) {
+      if (cargando) {
+        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+      } else {
+        Text(text = "Guardar cambios", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+      }
+    }
+  }
 }
 
+// ----------------------------------------------------
+// CONFIRMACIÓN DESDE NOTIFICACIÓN
+// ----------------------------------------------------
 
-// ----------------------------------------------------
-// CONFIRMACIÓN DESDE UNA NOTIFICACIÓN
-// ----------------------------------------------------
 @Composable
 fun DialogoConfirmacionCaducidad(
-    uid: String,
-    productoId: String,
-    cerrar: () -> Unit
+  uid: String,
+  productoId: String,
+  cerrar: () -> Unit
 ) {
-    val context = LocalContext.current
-    val db = remember { FirebaseFirestore.getInstance() }
-    var producto by remember(uid, productoId) { mutableStateOf<Map<String, Any>?>(null) }
-    var error by remember(uid, productoId) { mutableStateOf<String?>(null) }
-    var cargando by remember(uid, productoId) { mutableStateOf(true) }
-    var guardando by remember(uid, productoId) { mutableStateOf(false) }
-    var intentoLectura by remember(uid, productoId) { mutableIntStateOf(0) }
+  val context = LocalContext.current
+  val db = remember { FirebaseFirestore.getInstance() }
+  var producto by remember(uid, productoId) { mutableStateOf(mapaVacio()) }
+  var error by remember(uid, productoId) { mutableStateOf("") }
+  var cargando by remember(uid, productoId) { mutableStateOf(true) }
+  var guardando by remember(uid, productoId) { mutableStateOf(false) }
+  var intentoLectura by remember(uid, productoId) { mutableIntStateOf(0) }
 
-    LaunchedEffect(uid, productoId, intentoLectura) {
-        db.collection("productos").document(productoId).get()
-            .addOnSuccessListener { doc ->
-                val datos = doc.data
-                if (FirebaseAuth.getInstance().currentUser?.uid != uid ||
-                    !doc.exists() ||
-                    datos?.get("usuarioId") != uid ||
-                    datos["activo"] == false
-                ) {
-                    error = "El producto ya no está disponible en tu inventario."
-                } else {
-                    val confirmacionHoy = doc.getTimestamp("ultimaConfirmacion")
-                        ?.toDate()?.let { FechasCaducidad.esHoy(it) } == true
-                    if (confirmacionHoy) {
-                        // El usuario ya respondió hoy (incluso si se recreó la Activity).
-                        AvisosAtendidos.marcarAtendido(context, uid, productoId)
-                        cerrar()
-                        return@addOnSuccessListener
-                    }
-                    producto = datos
-                    error = null
-                }
-                cargando = false
-            }
-            .addOnFailureListener { excepcion ->
-                error = if (
-                    excepcion is FirebaseFirestoreException &&
-                    excepcion.code == FirebaseFirestoreException.Code.PERMISSION_DENIED
-                ) {
-                    "Firestore rechazó el acceso al producto (PERMISSION_DENIED). " +
-                        "Comprueba en Firebase Console que tu cuenta tenga permiso " +
-                        "para leer sus propios documentos en productos. " +
-                        "Puedes reintentar después de corregir las reglas."
-                } else {
-                    "No fue posible consultar el producto: ${excepcion.localizedMessage}"
-                }
-                cargando = false
-            }
-    }
-
-    fun confirmar(conservaProducto: Boolean) {
-        if (guardando || FirebaseAuth.getInstance().currentUser?.uid != uid) return
-        guardando = true
-        val cambios = mutableMapOf<String, Any>(
-            "ultimaConfirmacion" to Timestamp.now()
-        )
-        if (!conservaProducto) {
-            cambios["activo"] = false
-            cambios["cantidad"] = 0
+  LaunchedEffect(uid, productoId, intentoLectura) {
+    db.collection("productos").document(productoId).get()
+      .addOnSuccessListener { doc ->
+        val datos = doc.data
+        if (FirebaseAuth.getInstance().currentUser?.uid != uid ||
+          !doc.exists() ||
+          datos == null ||
+          datos["usuarioId"] != uid ||
+          datos["activo"] == false
+        ) {
+          error = "El producto ya no está disponible en tu inventario."
+        } else {
+          val confirmacionHoy = doc.getTimestamp("ultimaConfirmacion")
+            ?.toDate()?.let { FechasCaducidad.esHoy(it) } == true
+          if (confirmacionHoy) {
+            AvisosAtendidos.marcarAtendido(context, uid, productoId)
+            cerrar()
+            return@addOnSuccessListener
+          }
+          producto = datos
+          error = ""
         }
-        db.collection("productos").document(productoId).update(cambios)
-            .addOnSuccessListener {
-                // Solo marcar atendido cuando Firebase confirmó el guardado.
-                AvisosAtendidos.marcarAtendido(context, uid, productoId)
-                NotificationHelper.cancelarAlerta(context, uid, productoId)
-                Toast.makeText(
-                    context,
-                    if (conservaProducto) "Producto confirmado" else "Producto archivado",
-                    Toast.LENGTH_SHORT
-                ).show()
-                cerrar()
-            }
-            .addOnFailureListener {
-                guardando = false
-                error = "Error al guardar: ${it.localizedMessage}"
-            }
-    }
-
-    AlertDialog(
-        onDismissRequest = { if (!guardando) cerrar() },
-        title = { Text("¿Todavía tienes este producto?") },
-        text = {
-            Column {
-                if (cargando) {
-                    CircularProgressIndicator()
-                } else if (producto != null) {
-                    Text("${producto?.get("nombre") ?: "Producto"} — caduca: ${producto?.get("fechaCaducidad") ?: "Sin fecha"}")
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("Puedes conservarlo o archivarlo si ya lo consumiste o desechaste.")
-                }
-                if (error != null) Text(error ?: "", color = Color(0xFFD32F2F))
-            }
-        },
-        confirmButton = {
-            TextButton(
-                enabled = !cargando && !guardando && producto != null,
-                onClick = { confirmar(true) }
-            ) { Text("Sí, todavía lo tengo") }
-        },
-        dismissButton = {
-            Column {
-                if (error != null) {
-                    TextButton(
-                        enabled = !cargando && !guardando,
-                        onClick = {
-                            producto = null
-                            error = null
-                            cargando = true
-                            intentoLectura++
-                        }
-                    ) { Text("Reintentar lectura") }
-                }
-                TextButton(
-                    enabled = !cargando && !guardando && producto != null,
-                    onClick = { confirmar(false) }
-                ) { Text("Ya no lo tengo") }
-                TextButton(enabled = !guardando, onClick = cerrar) {
-                    Text("Más tarde")
-                }
-            }
+        cargando = false
+      }
+      .addOnFailureListener { excepcion ->
+        error = if (
+          excepcion is FirebaseFirestoreException &&
+          excepcion.code == FirebaseFirestoreException.Code.PERMISSION_DENIED
+        ) {
+          "Firestore rechazó el acceso al producto (PERMISSION_DENIED)."
+        } else {
+          "No fue posible consultar el producto: ${excepcion.localizedMessage}"
         }
-    )
+        cargando = false
+      }
+  }
+
+  fun confirmar(conservaProducto: Boolean) {
+    if (guardando || FirebaseAuth.getInstance().currentUser?.uid != uid) return
+    guardando = true
+    val cambios = if (conservaProducto) {
+      mapOf("ultimaConfirmacion" to Timestamp.now())
+    } else {
+      mapOf(
+        "ultimaConfirmacion" to Timestamp.now(),
+        "activo" to false,
+        "cantidad" to 0
+      )
+    }
+    db.collection("productos").document(productoId).update(cambios)
+      .addOnSuccessListener {
+        AvisosAtendidos.marcarAtendido(context, uid, productoId)
+        NotificationHelper.cancelarAlerta(context, uid, productoId)
+        Toast.makeText(
+          context,
+          if (conservaProducto) "Producto confirmado" else "Producto archivado",
+          Toast.LENGTH_SHORT
+        ).show()
+        cerrar()
+      }
+      .addOnFailureListener {
+        guardando = false
+        error = "Error al guardar: ${it.localizedMessage}"
+      }
+  }
+
+  AlertDialog(
+    onDismissRequest = { if (!guardando) cerrar() },
+    containerColor = SurfaceCard,
+    title = { Text("¿Todavía tienes este producto?", fontWeight = FontWeight.Bold, color = TextPrimary) },
+    text = {
+      Column {
+        if (cargando) {
+          CircularProgressIndicator(color = TextPrimary, strokeWidth = 2.dp)
+        } else if (producto.isNotEmpty()) {
+          Text(
+            text = "${producto["nombre"] ?: "Producto"} · Vence: ${producto["fechaCaducidad"] ?: "Sin fecha"}",
+            fontWeight = FontWeight.Medium,
+            color = TextPrimary
+          )
+          Spacer(modifier = Modifier.height(8.dp))
+          Text(
+            text = "Puedes conservarlo activo o archivarlo si ya lo consumiste.",
+            color = TextSecondary,
+            fontSize = 14.sp
+          )
+        }
+        if (error.isNotBlank()) Text(error, color = StatusDanger, fontSize = 13.sp)
+      }
+    },
+    confirmButton = {
+      TextButton(
+        enabled = !cargando && !guardando && producto.isNotEmpty(),
+        onClick = { confirmar(true) }
+      ) { Text("Sí, lo conservo", color = TextPrimary, fontWeight = FontWeight.SemiBold) }
+    },
+    dismissButton = {
+      Column {
+        if (error.isNotBlank()) {
+          TextButton(
+            enabled = !cargando && !guardando,
+            onClick = {
+              producto = mapaVacio()
+              error = ""
+              cargando = true
+              intentoLectura++
+            }
+          ) { Text("Reintentar", color = TextPrimary) }
+        }
+        TextButton(
+          enabled = !cargando && !guardando && producto.isNotEmpty(),
+          onClick = { confirmar(false) }
+        ) { Text("Ya no lo tengo", color = StatusDanger) }
+        TextButton(enabled = !guardando, onClick = cerrar) {
+          Text("Más tarde", color = TextSecondary)
+        }
+      }
+    }
+  )
 }
