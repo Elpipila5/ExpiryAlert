@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 *.iml
 .gradle
 /local.properties
@@ -14,7 +13,6 @@
 .externalNativeBuild
 .cxx
 local.properties
-=======
 # Sistema y editores
 .DS_Store
 Thumbs.db
@@ -46,6 +44,7 @@ node_modules/
 .pub-cache/
 .pub/
 .gradle/
+.kotlin/
 build/
 dist/
 coverage/
@@ -60,4 +59,3 @@ __pycache__/
 *.ipa
 
 # Se conservan manifiestos, lockfiles y los proyectos de plataforma.
->>>>>>> 4113c46d2e1d4584fc8598bf8e9028b1bb128042

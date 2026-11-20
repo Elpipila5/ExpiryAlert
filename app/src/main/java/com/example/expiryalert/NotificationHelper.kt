@@ -26,9 +26,9 @@ object NotificationHelper {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val canal = NotificationChannel(
                 CHANNEL_ID,
-                "Alertas de caducidad",
+                "Alertas de ExpiryAlert",
                 NotificationManager.IMPORTANCE_HIGH
-            ).apply { description = "Notificaciones de productos próximos a caducar" }
+            ).apply { description = "Caducidad, bajo stock, revisión de cantidades y desayuno" }
             val manager =
                 context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(canal)
@@ -62,7 +62,11 @@ object NotificationHelper {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .build()
-        NotificationManagerCompat.from(context).notify(1001, notificacion)
+        try {
+            NotificationManagerCompat.from(context).notify(1001, notificacion)
+        } catch (_: SecurityException) {
+            // El permiso puede revocarse después de la comprobación anterior.
+        }
     }
 
     fun mostrarAlertaCaducidad(
