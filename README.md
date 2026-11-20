@@ -4,14 +4,22 @@ Aplicación para la detección de productos que ya van a expirar, ya expiraron o
 
 Permite controlar la caducidad y las cantidades de un inventario personal. El proyecto pertenece a **Desarrollo Móvil Integral**, grupo **IDGS10**, Universidad Tecnológica de Montemorelos, septiembre-noviembre de 2026.
 
-**Estado del repositorio (Sprint 5):** contiene una aplicación Android nativa en Kotlin y Jetpack Compose con Firebase Auth/Firestore, inventario, registro manual, OCR y código de barras, y alertas de caducidad. Las funcionalidades y la seguridad deben comprobarse en Android Studio y Firebase antes de declararse terminadas. Ver [matriz del Sprint 5](docs/pruebas/sprint5-integracion.md).
+**Rama de esta integración: `v21` · Versión `1.2.0-v21`.** Conserva el perfil y el diseño minimalista, incorpora el motor local de 28 recetas de main y añade consumo, correcciones de cantidad, revisión periódica, bajo stock, lista de compras y recordatorio de desayuno.
 
-## Recetas (PB10 / Sprint 7)
+## Funciones de los sprints 6 a 8
 
-La rama `feature/recetas-inventario-desde-cero` **reconstruye el sistema de recetas para que funcione sin IA**. Calcula cuáles de las 28 recetas se pueden preparar con los productos del usuario, muestra qué ingredientes faltan para las recetas incompletas, y cuando el inventario está vacío enseña recetas junto con la lista completa de compras. Incluye pasos, copiado de faltantes y búsquedas en YouTube. Los productos vencidos, archivados o agotados se excluyen. El backend IA previo se conserva como material opcional y ya **no se usa en la pantalla**.
+- **Mi despensa:** registrar consumo con conversiones kg/g y L/ml, ajustar cantidades y revisar saldos periódicamente.
+- **Mis compras:** agregar productos manualmente, desde bajo stock o desde los ingredientes faltantes de una receta; editar y marcar compras.
+- **Mi desayuno:** registrar los productos consumidos y configurar un recordatorio aproximado.
+- **Perfil → Inventario y horario de desayuno:** cambiar porcentaje de bajo stock, intervalo de revisión y hora de desayuno.
+- **Recetas:** completas, parciales e ideas sin inventario; priorizar ingredientes próximos a caducar, mostrar pasos y buscar preparación en YouTube.
 
-- [Pruebas F10 del Sprint 7: inventario completo, parcial y vacío](docs/pruebas/sprint7-recetas.md)
-- [Backend IA opcional no conectado a esta interfaz](backend/README.md)
+Productos y cantidades se mantienen en Firebase. Compras y preferencias se conservan por cuenta en el dispositivo. El recordatorio de desayuno funciona con WorkManager y puede retrasarse por las restricciones de batería de Android.
+
+Se ejecutaron **62 pruebas unitarias** sobre el código Kotlin de producción. Las pruebas en teléfono, persistencia Android, permisos y regresión deben completarse antes de declarar la entrega final. Consulta [la implementación, los resultados y la matriz de aceptación de v21](docs/pruebas/v21-sprints6-9.md).
+
+- [Pruebas F10 del Sprint 7](docs/pruebas/sprint7-recetas.md)
+- [Backend IA anterior, opcional y no conectado a esta interfaz](backend/README.md)
 
 ## Empieza aquí
 

@@ -30,6 +30,7 @@ object ProgramadorAlertas {
 
     fun activar(context: Context, uid: String) {
         if (uid.isBlank()) return
+        ProgramadorDesayuno.programar(context, uid)
         val tarea = PeriodicWorkRequestBuilder<RevisionCaducidadWorker>(
             1, TimeUnit.DAYS
         )
@@ -57,6 +58,8 @@ object ProgramadorAlertas {
     }
 
     fun desactivar(context: Context, uid: String) {
+        ProgramadorDesayuno.cancelar(context, uid)
+        AvisosInventario.cancelarUsuario(context, uid)
         val manager = WorkManager.getInstance(context.applicationContext)
         manager.cancelUniqueWork(nombrePeriodico(uid))
         manager.cancelUniqueWork(nombreManual(uid))

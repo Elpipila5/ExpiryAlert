@@ -45,6 +45,10 @@ class RevisionCaducidadWorker(
                 return Result.success()
             }
 
+            AvisosInventario.comprobar(applicationContext, uid, productos.documents.mapNotNull {
+                InventarioProductos.productoVisible(it.id, it.data)
+            })
+
             productos.documents.forEach { documento ->
                 if (isStopped || auth.currentUser?.uid != uid) {
                     return Result.success()

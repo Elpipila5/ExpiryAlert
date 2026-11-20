@@ -8,7 +8,9 @@ import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -54,38 +56,54 @@ private fun listaProductosVacia(): List<ProductoMapa> = emptyList()
 // ----------------------------------------------------
 // PALETA MINIMALISTA Y ELEGANTE
 // ----------------------------------------------------
-private val BgPrimary = Color(0xFFFAFAFA)       // Blanco hueso muy sutil
-private val SurfaceCard = Color(0xFFFFFFFF)     // Blanco puro
-private val SurfaceMuted = Color(0xFFF4F4F5)    // Gris tenue para inputs y píldoras
-private val BorderSubtle = Color(0xFFE4E4E7)    // Borde fino elegante
-private val TextPrimary = Color(0xFF18181B)     // Negro carbón suave
-private val TextSecondary = Color(0xFF71717A)   // Gris neutro para subtítulos
-private val AccentDark = Color(0xFF18181B)      // Botón principal minimalista
-private val AccentSage = Color(0xFF0F766E)      // Verde salvia profundo (Recetas / Seguro)
+internal val BgPrimary = Color(0xFFFAFAFA)       // Blanco hueso muy sutil
+internal val SurfaceCard = Color(0xFFFFFFFF)     // Blanco puro
+internal val SurfaceMuted = Color(0xFFF4F4F5)    // Gris tenue para inputs y píldoras
+internal val BorderSubtle = Color(0xFFE4E4E7)    // Borde fino elegante
+internal val TextPrimary = Color(0xFF18181B)     // Negro carbón suave
+internal val TextSecondary = Color(0xFF71717A)   // Gris neutro para subtítulos
+internal val AccentDark = Color(0xFF18181B)      // Botón principal minimalista
+internal val AccentSage = Color(0xFF0F766E)      // Verde salvia profundo (Recetas / Seguro)
 
-private val StatusSafe = Color(0xFF15803D)
-private val StatusSafeBg = Color(0xFFF0FDF4)
-private val StatusWarn = Color(0xFFB45309)
-private val StatusWarnBg = Color(0xFFFFFBEB)
-private val StatusDanger = Color(0xFFB91C1C)
-private val StatusDangerBg = Color(0xFFFEF2F2)
+internal val StatusSafe = Color(0xFF15803D)
+internal val StatusSafeBg = Color(0xFFF0FDF4)
+internal val StatusWarn = Color(0xFFB45309)
+internal val StatusWarnBg = Color(0xFFFFFBEB)
+internal val StatusDanger = Color(0xFFB91C1C)
+internal val StatusDangerBg = Color(0xFFFEF2F2)
 
 class MainActivity : ComponentActivity() {
 
   companion object {
     private const val ESTADO_AVISO_UID = "expiry_aviso_uid"
     private const val ESTADO_AVISO_ID = "expiry_aviso_id"
+    private const val ESTADO_DESTINO = "expiry_destino"
+    private const val ESTADO_DESTINO_UID = "expiry_destino_uid"
   }
 
   private var avisoUid by mutableStateOf("")
   private var avisoProductoId by mutableStateOf("")
+  private var destinoPantalla by mutableStateOf("")
+  private var destinoUid by mutableStateOf("")
+
+  private fun atenderDestino() {
+    destinoPantalla = ""
+    destinoUid = ""
+  }
 
   private fun limpiarExtrasAviso(origen: Intent?) {
     origen?.removeExtra(NotificationHelper.EXTRA_USUARIO_ID)
     origen?.removeExtra(NotificationHelper.EXTRA_PRODUCTO_ID)
+    origen?.removeExtra(AvisosInventario.EXTRA_DESTINO)
+    origen?.removeExtra(AvisosInventario.EXTRA_UID)
   }
 
   private fun leerAviso(origen: Intent?) {
+    val destino = origen?.getStringExtra(AvisosInventario.EXTRA_DESTINO).orEmpty()
+    if (destino in listOf("compras", "revision", "desayuno")) {
+      destinoPantalla = destino
+      destinoUid = origen?.getStringExtra(AvisosInventario.EXTRA_UID).orEmpty()
+    }
     val uid = origen?.getStringExtra(NotificationHelper.EXTRA_USUARIO_ID).orEmpty()
     val id = origen?.getStringExtra(NotificationHelper.EXTRA_PRODUCTO_ID).orEmpty()
     if (uid.isNotBlank() && id.isNotBlank() && !AvisosAtendidos.fueAtendido(this, uid, id)) {
@@ -106,6 +124,8 @@ class MainActivity : ComponentActivity() {
       outState.putString(ESTADO_AVISO_UID, avisoUid)
       outState.putString(ESTADO_AVISO_ID, avisoProductoId)
     }
+    outState.putString(ESTADO_DESTINO, destinoPantalla)
+    outState.putString(ESTADO_DESTINO_UID, destinoUid)
     super.onSaveInstanceState(outState)
   }
 
@@ -135,6 +155,8 @@ class MainActivity : ComponentActivity() {
     if (savedInstanceState == null) {
       leerAviso(intent)
     } else {
+      destinoPantalla = savedInstanceState.getString(ESTADO_DESTINO).orEmpty()
+      destinoUid = savedInstanceState.getString(ESTADO_DESTINO_UID).orEmpty()
       val uid = savedInstanceState.getString(ESTADO_AVISO_UID).orEmpty()
       val productoId = savedInstanceState.getString(ESTADO_AVISO_ID).orEmpty()
       if (uid.isNotBlank() && productoId.isNotBlank() && !AvisosAtendidos.fueAtendido(this, uid, productoId)) {
@@ -151,6 +173,9 @@ class MainActivity : ComponentActivity() {
     setContent {
       ExpiryAlertTheme {
         ExpiryAlertApp(
+          destinoUid = destinoUid,
+          destinoPantalla = destinoPantalla,
+          destinoAtendido = { atenderDestino() },
           avisoUid = avisoUid,
           avisoProductoId = avisoProductoId,
           avisoAtendido = { atenderAviso() },
@@ -256,13 +281,16 @@ fun CabeceraNavegacion(titulo: String, onRegresar: () -> Unit) {
 
 @Composable
 fun ExpiryAlertApp(
+  destinoUid: String,
+  destinoPantalla: String,
+  destinoAtendido: () -> Unit,
   avisoUid: String,
   avisoProductoId: String,
   avisoAtendido: () -> Unit,
   activarAlertas: (String) -> Unit,
   cerrarAlertas: (String) -> Unit
 ) {
-  var pantalla by remember {
+  var pantalla by rememberSaveable {
     mutableStateOf(if (FirebaseAuth.getInstance().currentUser != null) "principal" else "inicio")
   }
   var productoEditar by remember { mutableStateOf(mapaVacio()) }
@@ -276,7 +304,20 @@ fun ExpiryAlertApp(
     FirebaseAuth.getInstance().signOut()
     productoEditar = mapaVacio()
     avisoAtendido()
+    destinoAtendido()
     pantalla = "inicio"
+  }
+
+  LaunchedEffect(destinoUid, destinoPantalla) {
+    if (destinoPantalla.isNotBlank()) {
+      if (FirebaseAuth.getInstance().currentUser?.uid == destinoUid &&
+        destinoPantalla in listOf("compras", "revision", "desayuno")) pantalla = destinoPantalla
+      destinoAtendido()
+    }
+  }
+
+  BackHandler(enabled = pantalla !in listOf("inicio", "principal")) {
+    pantalla = if (FirebaseAuth.getInstance().currentUser != null) "principal" else "inicio"
   }
 
   LaunchedEffect(pantalla) {
@@ -315,6 +356,9 @@ fun ExpiryAlertApp(
         agregarProducto = { pantalla = "agregarProducto" },
         verRecetas = { pantalla = "recetas" },
         irPerfil = { pantalla = "perfil" },
+        irCompras = { pantalla = "compras" },
+        irRevision = { pantalla = "revision" },
+        irDesayuno = { pantalla = "desayuno" },
         editarProducto = { prod ->
           productoEditar = prod
           pantalla = "editarProducto"
@@ -323,10 +367,20 @@ fun ExpiryAlertApp(
       )
       "perfil" -> PantallaPerfil(
         regresar = { pantalla = "principal" },
+        irAjustes = { pantalla = "ajustes" },
         cerrarSesion = accionCerrarSesion
       )
       "recetas" -> RecetasScreen(
-        onVolver = { pantalla = "principal" }
+        onVolver = { pantalla = "principal" },
+        onCompras = { pantalla = "compras" }
+      )
+      "compras" -> ComprasScreen(onVolver = { pantalla = "principal" })
+      "revision" -> RevisionInventarioScreen(onVolver = { pantalla = "principal" })
+      "ajustes" -> AjustesInventarioScreen(onVolver = { pantalla = "perfil" })
+      "desayuno" -> DesayunoScreen(
+        onVolver = { pantalla = "principal" },
+        onRecetas = { pantalla = "recetas" },
+        onAjustes = { pantalla = "ajustes" }
       )
       "agregarProducto" -> PantallaAgregarProducto(
         regresar = { pantalla = "principal" },
@@ -723,7 +777,7 @@ fun PantallaRegistro(regresar: () -> Unit, irLogin: () -> Unit, registroExitoso:
 // ----------------------------------------------------
 
 @Composable
-fun PantallaPerfil(regresar: () -> Unit, cerrarSesion: () -> Unit) {
+fun PantallaPerfil(regresar: () -> Unit, irAjustes: () -> Unit, cerrarSesion: () -> Unit) {
   val context = LocalContext.current
   val usuario = FirebaseAuth.getInstance().currentUser
   val db = FirebaseFirestore.getInstance()
@@ -900,6 +954,10 @@ fun PantallaPerfil(regresar: () -> Unit, cerrarSesion: () -> Unit) {
       border = BorderStroke(1.dp, BorderSubtle)
     ) {
       Column(modifier = Modifier.padding(20.dp)) {
+        OutlinedButton(onClick = irAjustes, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(10.dp)) {
+          Text("Inventario y horario de desayuno", color = TextPrimary)
+        }
+        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = SurfaceMuted)
         FilaDetallePerfil("Miembro desde", fechaCreacionCuenta)
         HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = SurfaceMuted)
         FilaDetallePerfil("ID de cuenta", "${usuario?.uid?.take(10) ?: "N/A"}…")
@@ -1003,6 +1061,9 @@ fun PantallaPrincipal(
   agregarProducto: () -> Unit,
   verRecetas: () -> Unit,
   irPerfil: () -> Unit,
+  irCompras: () -> Unit,
+  irRevision: () -> Unit,
+  irDesayuno: () -> Unit,
   editarProducto: (ProductoMapa) -> Unit,
   cerrarSesion: () -> Unit
 ) {
@@ -1016,6 +1077,22 @@ fun PantallaPrincipal(
   var productoEliminar by remember { mutableStateOf(mapaVacio()) }
   var revisandoCaducidades by remember { mutableStateOf(false) }
   var resultadoRevision by remember { mutableStateOf("") }
+  var productoAccion by rememberSaveable(usuario?.uid) { mutableStateOf("") }
+  var accionCantidad by rememberSaveable(usuario?.uid) { mutableStateOf(OperacionCantidad.CONSUMIR.name) }
+  val ajustes = PreferenciasInventario.ajustes(context, usuario?.uid.orEmpty())
+  val porReponer = productos.count { ControlCantidades.bajoStock(it, ajustes.porcentajeStock) }
+  val porRevisar = productos.count { revisionPendiente(it, ajustes) }
+
+  productos.firstOrNull { it["id"] == productoAccion }?.let { producto ->
+    DialogoCantidad(producto, OperacionCantidad.valueOf(accionCantidad), { productoAccion = "" }) {
+      productoAccion = ""
+      Toast.makeText(context, "Cantidad actualizada", Toast.LENGTH_SHORT).show()
+    }
+  }
+
+  LaunchedEffect(productos, usuario?.uid, cargando, errorCarga) {
+    if (usuario != null && !cargando && errorCarga.isBlank()) AvisosInventario.comprobar(context, usuario.uid, productos)
+  }
 
   val nombreMostrado = remember(usuario?.displayName, usuario?.email) {
     val display = usuario?.displayName
@@ -1201,7 +1278,19 @@ fun PantallaPrincipal(
       }
     }
 
-    Spacer(modifier = Modifier.height(28.dp))
+    Spacer(modifier = Modifier.height(10.dp))
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+      OutlinedButton(onClick = irCompras, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
+        Text("Mis compras ($porReponer)", color = TextPrimary, fontSize = 13.sp)
+      }
+      OutlinedButton(onClick = irDesayuno, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
+        Text("Mi desayuno", color = TextPrimary, fontSize = 13.sp)
+      }
+    }
+    TextButton(onClick = irRevision) {
+      Text(if (porRevisar > 0) "Revisar cantidades · $porRevisar pendientes" else "Revisar cantidades de mi despensa", color = AccentSage)
+    }
+    Spacer(modifier = Modifier.height(18.dp))
 
     // Encabezado de lista
     Row(
@@ -1308,7 +1397,21 @@ fun PantallaPrincipal(
           TarjetaProducto(
             producto = prod,
             editar = { editarProducto(prod) },
-            eliminar = { productoEliminar = prod }
+            eliminar = { productoEliminar = prod },
+            bajoStock = ControlCantidades.bajoStock(prod, ajustes.porcentajeStock),
+            consumir = { accionCantidad = OperacionCantidad.CONSUMIR.name; productoAccion = prod["id"].toString() },
+            ajustar = { accionCantidad = OperacionCantidad.CORREGIR.name; productoAccion = prod["id"].toString() },
+            agregarCompra = {
+              try {
+                val uid = usuario?.uid ?: error("Inicia sesión para guardar compras.")
+                val nuevos = PreferenciasInventario.agregarCompras(context, uid, listOf(ItemCompra(
+                  nombre = prod["nombre"].toString(),
+                  cantidad = ControlCantidades.numero(prod["cantidadInicial"])?.takeIf { it > 0 } ?: 1.0,
+                  unidad = prod["unidad"]?.toString().orEmpty().ifBlank { "pzas" }
+                )))
+                Toast.makeText(context, if (nuevos == 0) "Ya está en tu lista" else "Agregado a compras", Toast.LENGTH_SHORT).show()
+              } catch (e: Exception) { Toast.makeText(context, e.localizedMessage, Toast.LENGTH_LONG).show() }
+            }
           )
           Spacer(modifier = Modifier.height(10.dp))
         }
@@ -1325,123 +1428,72 @@ fun PantallaPrincipal(
 fun TarjetaProducto(
   producto: ProductoMapa,
   editar: () -> Unit,
-  eliminar: () -> Unit
+  eliminar: () -> Unit,
+  bajoStock: Boolean,
+  consumir: () -> Unit,
+  ajustar: () -> Unit,
+  agregarCompra: () -> Unit
 ) {
-  val nombre = producto["nombre"]?.toString() ?: "Sin nombre"
-  val categoria = producto["categoria"]?.toString() ?: "General"
-  val cantidad = (producto["cantidad"] as? Number)?.let {
-    if (it.toDouble() % 1.0 == 0.0) it.toLong().toString() else it.toString()
-  } ?: producto["cantidad"]?.toString() ?: "0"
-  val unidadMostrada = producto["unidad"]?.toString() ?: "pzas"
-  val fechaCaducidad = producto["fechaCaducidad"]?.toString().orEmpty()
-  val estado = calcularEstadoCaducidad(fechaCaducidad)
-  val marcaMostrada = producto["marca"]?.toString().orEmpty()
-
-  val colorEstado = when (estado) {
+  val cantidad = ControlCantidades.numero(producto["cantidad"]) ?: 0.0
+  val inicial = ControlCantidades.numero(producto["cantidadInicial"])?.takeIf { it > 0 }
+  val unidad = producto["unidad"]?.toString() ?: "pzas"
+  val fecha = producto["fechaCaducidad"]?.toString().orEmpty()
+  val estado = calcularEstadoCaducidad(fecha)
+  val color = when (estado) {
     "Vencido" -> StatusDanger
     "Próximo a caducar" -> StatusWarn
-    "Caducidad pendiente", "Fecha inválida" -> TextSecondary
-    else -> StatusSafe
+    "Seguro" -> StatusSafe
+    else -> TextSecondary
   }
-  val fondoBadge = when (estado) {
-    "Vencido" -> StatusDangerBg
-    "Próximo a caducar" -> StatusWarnBg
-    "Caducidad pendiente", "Fecha inválida" -> SurfaceMuted
-    else -> StatusSafeBg
-  }
-
-  Surface(
-    modifier = Modifier.fillMaxWidth(),
-    shape = RoundedCornerShape(16.dp),
-    color = SurfaceCard,
-    border = BorderStroke(1.dp, BorderSubtle)
-  ) {
-    Column(modifier = Modifier.padding(18.dp)) {
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Top
-      ) {
-        Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-          Text(
-            text = nombre,
-            fontSize = 17.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = TextPrimary
-          )
-          Spacer(modifier = Modifier.height(2.dp))
-          val subtitulo = if (marcaMostrada.isNotBlank()) "$categoria · $marcaMostrada" else categoria
-          Text(
-            text = subtitulo,
-            fontSize = 13.sp,
-            color = TextSecondary
-          )
-        }
-
-        // Píldora minimalista con punto de color
-        Row(
-          modifier = Modifier
-            .clip(RoundedCornerShape(99.dp))
-            .background(fondoBadge)
-            .padding(horizontal = 10.dp, vertical = 5.dp),
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          Box(
-            modifier = Modifier
-              .size(6.dp)
-              .clip(CircleShape)
-              .background(colorEstado)
-          )
-          Spacer(modifier = Modifier.width(6.dp))
-          Text(
-            text = estado,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = colorEstado
-          )
-        }
+  PanelInventario {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+      Column(Modifier.weight(1f).padding(end = 12.dp)) {
+        Text(producto["nombre"]?.toString() ?: "Sin nombre", fontSize = 17.sp,
+          fontWeight = FontWeight.SemiBold, color = TextPrimary)
+        Text(listOfNotNull(producto["categoria"]?.toString(), producto["marca"]?.toString()?.takeIf { it.isNotBlank() })
+          .joinToString(" · "), fontSize = 13.sp, color = TextSecondary)
       }
-
-      Spacer(modifier = Modifier.height(14.dp))
-      HorizontalDivider(color = SurfaceMuted)
-      Spacer(modifier = Modifier.height(10.dp))
-
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-          Column {
-            Text(text = "CANTIDAD", fontSize = 10.sp, color = TextSecondary, fontWeight = FontWeight.Medium)
-            Text(text = "$cantidad $unidadMostrada", fontSize = 13.sp, color = TextPrimary, fontWeight = FontWeight.SemiBold)
-          }
-          Column {
-            Text(text = "VENCIMIENTO", fontSize = 10.sp, color = TextSecondary, fontWeight = FontWeight.Medium)
-            Text(
-              text = if (fechaCaducidad.isBlank()) "Pendiente" else fechaCaducidad,
-              fontSize = 13.sp,
-              color = TextPrimary,
-              fontWeight = FontWeight.SemiBold
-            )
-          }
-        }
-
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-          TextButton(
-            onClick = editar,
-            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
-          ) {
-            Text(text = "Editar", fontSize = 13.sp, color = TextPrimary, fontWeight = FontWeight.Medium)
-          }
-          TextButton(
-            onClick = eliminar,
-            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
-          ) {
-            Text(text = "Eliminar", fontSize = 13.sp, color = StatusDanger, fontWeight = FontWeight.Medium)
-          }
-        }
+      val fondo = when (estado) {
+        "Vencido" -> StatusDangerBg
+        "Próximo a caducar" -> StatusWarnBg
+        "Seguro" -> StatusSafeBg
+        else -> SurfaceMuted
       }
+      Row(Modifier.clip(RoundedCornerShape(99.dp)).background(fondo).padding(horizontal = 10.dp, vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(6.dp).clip(CircleShape).background(color))
+        Spacer(Modifier.width(6.dp))
+        Text(estado, color = color, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+      }
+    }
+    HorizontalDivider(color = SurfaceMuted)
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+      Column(Modifier.weight(1f)) {
+        Text("CANTIDAD RESTANTE", fontSize = 10.sp, color = TextSecondary)
+        Text("${ControlCantidades.texto(cantidad)} $unidad", color = TextPrimary, fontWeight = FontWeight.SemiBold)
+        if (inicial != null) Text("Inicial: ${ControlCantidades.texto(inicial)} $unidad", fontSize = 12.sp, color = TextSecondary)
+      }
+      Column(Modifier.weight(1f)) {
+        Text("VENCIMIENTO", fontSize = 10.sp, color = TextSecondary)
+        Text(fecha.ifBlank { "Pendiente" }, color = TextPrimary)
+      }
+    }
+    if (bajoStock) Text(if (cantidad == 0.0) "Agotado · considera reponerlo" else "Bajo stock · considera reponerlo",
+      color = StatusWarn, fontWeight = FontWeight.Medium)
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+      OutlinedButton(onClick = consumir, enabled = cantidad > 0.0, modifier = Modifier.weight(1f), shape = RoundedCornerShape(10.dp)) {
+        Text("Consumir", color = if (cantidad > 0) TextPrimary else TextSecondary)
+      }
+      OutlinedButton(onClick = ajustar, modifier = Modifier.weight(1f), shape = RoundedCornerShape(10.dp)) {
+        Text("Ajustar cantidad", color = TextPrimary)
+      }
+    }
+    if (bajoStock) OutlinedButton(onClick = agregarCompra, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(10.dp)) {
+      Text("Agregar a compras", color = AccentSage)
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+      TextButton(onClick = editar) { Text("Editar datos", color = TextPrimary) }
+      TextButton(onClick = eliminar) { Text("Eliminar", color = StatusDanger) }
     }
   }
 }
@@ -1622,12 +1674,13 @@ fun PantallaAgregarProducto(regresar: () -> Unit, productoGuardado: () -> Unit) 
         val usuario = auth.currentUser
         when {
           usuario == null -> Toast.makeText(context, "No hay una sesión iniciada", Toast.LENGTH_SHORT).show()
-          nombre.isBlank() -> Toast.makeText(context, "Escribe el nombre del producto", Toast.LENGTH_SHORT).show()
-          categoria.isBlank() -> Toast.makeText(context, "Escribe una categoría", Toast.LENGTH_SHORT).show()
+          nombre.isBlank() || nombre.trim().length > 150 -> Toast.makeText(context, "Escribe un nombre de hasta 150 caracteres", Toast.LENGTH_SHORT).show()
+          marca.trim().length > 150 -> Toast.makeText(context, "La marca admite hasta 150 caracteres", Toast.LENGTH_SHORT).show()
+          categoria.isBlank() || categoria.trim().length > 100 -> Toast.makeText(context, "Escribe una categoría de hasta 100 caracteres", Toast.LENGTH_SHORT).show()
           cantidad.isBlank() -> Toast.makeText(context, "Escribe la cantidad", Toast.LENGTH_SHORT).show()
-          cantidad.toDoubleOrNull()?.let { it > 0.0 && it.isFinite() } != true ->
-            Toast.makeText(context, "La cantidad debe ser mayor que 0", Toast.LENGTH_SHORT).show()
-          unidad.isBlank() -> Toast.makeText(context, "Escribe una unidad", Toast.LENGTH_SHORT).show()
+          ControlCantidades.numero(cantidad)?.let { it > 0.0 } != true ->
+            Toast.makeText(context, "La cantidad debe ser mayor que 0 y hasta 1000000", Toast.LENGTH_SHORT).show()
+          unidad.isBlank() || unidad.trim().length > 30 -> Toast.makeText(context, "Escribe una unidad de hasta 30 caracteres", Toast.LENGTH_SHORT).show()
           fechaCaducidad.isNotBlank() && FechasCaducidad.diasRestantes(fechaCaducidad) == null ->
             Toast.makeText(context, "Fecha inválida.", Toast.LENGTH_SHORT).show()
           else -> {
@@ -1644,7 +1697,9 @@ fun PantallaAgregarProducto(regresar: () -> Unit, productoGuardado: () -> Unit) 
               "caducidadPendiente" to fechaCaducidad.isBlank(),
               "usuarioId" to usuario.uid,
               "correoUsuario" to (usuario.email ?: ""),
-              "fechaCreacion" to Timestamp.now()
+              "fechaCreacion" to Timestamp.now(),
+              "ultimaConfirmacion" to Timestamp.now(),
+              "activo" to true
             )
             db.collection("productos").add(producto)
               .addOnSuccessListener {
@@ -1757,26 +1812,9 @@ fun PantallaEditarProducto(
           label = "Marca (opcional)"
         )
         Spacer(modifier = Modifier.height(14.dp))
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-          Box(modifier = Modifier.weight(1f)) {
-            CampoTextoMinimalista(
-              value = cantidad,
-              onValueChange = { nuevoValor ->
-                val limpio = nuevoValor.replace(',', '.')
-                if (limpio.matches(Regex("""\d*(?:\.\d{0,3})?"""))) cantidad = limpio
-              },
-              label = "Cantidad",
-              keyboardType = KeyboardType.Decimal
-            )
-          }
-          Box(modifier = Modifier.weight(1f)) {
-            CampoTextoMinimalista(
-              value = unidad,
-              onValueChange = { unidad = it },
-              label = "Unidad"
-            )
-          }
-        }
+        Text("Cantidad restante: $cantidad $unidad", color = TextPrimary, fontWeight = FontWeight.Medium)
+        Text("Usa «Consumir» o «Ajustar cantidad» en tu despensa para cambiar el saldo. Para otra unidad o una reposición, registra un nuevo producto.",
+          color = TextSecondary, fontSize = 13.sp)
         Spacer(modifier = Modifier.height(14.dp))
         CampoTextoMinimalista(
           value = fechaCaducidad,
@@ -1811,12 +1849,10 @@ fun PantallaEditarProducto(
         when {
           usuario == null -> Toast.makeText(context, "No hay una sesión iniciada", Toast.LENGTH_SHORT).show()
           idProducto.isBlank() -> Toast.makeText(context, "No se encontró el producto", Toast.LENGTH_SHORT).show()
-          nombre.isBlank() -> Toast.makeText(context, "Escribe el nombre del producto", Toast.LENGTH_SHORT).show()
-          categoria.isBlank() -> Toast.makeText(context, "Escribe una categoría", Toast.LENGTH_SHORT).show()
-          cantidad.isBlank() -> Toast.makeText(context, "Escribe la cantidad", Toast.LENGTH_SHORT).show()
-          cantidad.toDoubleOrNull()?.let { it > 0.0 && it.isFinite() } != true ->
-            Toast.makeText(context, "La cantidad debe ser mayor que 0", Toast.LENGTH_SHORT).show()
-          unidad.isBlank() -> Toast.makeText(context, "Escribe una unidad", Toast.LENGTH_SHORT).show()
+          nombre.isBlank() || nombre.trim().length > 150 -> Toast.makeText(context, "Escribe un nombre de hasta 150 caracteres", Toast.LENGTH_SHORT).show()
+          marca.trim().length > 150 -> Toast.makeText(context, "La marca admite hasta 150 caracteres", Toast.LENGTH_SHORT).show()
+          categoria.isBlank() || categoria.trim().length > 100 -> Toast.makeText(context, "Escribe una categoría de hasta 100 caracteres", Toast.LENGTH_SHORT).show()
+          unidad.isBlank() || unidad.trim().length > 30 -> Toast.makeText(context, "Escribe una unidad de hasta 30 caracteres", Toast.LENGTH_SHORT).show()
           fechaCaducidad.isNotBlank() && FechasCaducidad.diasRestantes(fechaCaducidad) == null ->
             Toast.makeText(context, "Fecha inválida.", Toast.LENGTH_SHORT).show()
           else -> {
@@ -1826,8 +1862,6 @@ fun PantallaEditarProducto(
               "categoria" to categoria.trim(),
               "marca" to marca.trim(),
               "codigoBarras" to codigoBarras,
-              "cantidad" to cantidad.toDouble(),
-              "unidad" to unidad.trim(),
               "fechaCaducidad" to fechaCaducidad,
               "caducidadPendiente" to fechaCaducidad.isBlank(),
               "usuarioId" to usuario.uid,
@@ -1966,7 +2000,7 @@ fun DialogoConfirmacionCaducidad(
           )
           Spacer(modifier = Modifier.height(8.dp))
           Text(
-            text = "Puedes conservarlo activo o archivarlo si ya lo consumiste.",
+            text = "Cantidad estimada: ${producto["cantidad"] ?: "0"} ${producto["unidad"] ?: "pzas"}. Al conservarlo confirmas esta cantidad. También puedes corregirla desde tu despensa.",
             color = TextSecondary,
             fontSize = 14.sp
           )
