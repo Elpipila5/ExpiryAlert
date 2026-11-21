@@ -42,6 +42,7 @@ private fun abrirPreferenciasNotificaciones(contexto: Context) {
 fun AjustesInventarioScreen(onVolver: () -> Unit) {
     val contexto = LocalContext.current
     val uid = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
+    val temaDialogo = if (LocalApariencia.current?.oscuro == true) android.R.style.Theme_Material_Dialog else android.R.style.Theme_Material_Light_Dialog
     val inicial = remember(uid) { PreferenciasInventario.ajustes(contexto, uid) }
     var porcentaje by rememberSaveable(uid) { mutableStateOf(inicial.porcentajeStock.toString()) }
     var dias by rememberSaveable(uid) { mutableStateOf(inicial.diasRevision.toString()) }
@@ -80,7 +81,7 @@ fun AjustesInventarioScreen(onVolver: () -> Unit) {
             }
             Text("Elige la hora a la que sueles desayunar. El aviso te preguntará qué vas a consumir.", color = TextSecondary)
             OutlinedButton(onClick = {
-                TimePickerDialog(contexto, { _, h, m -> hora = h; minuto = m }, hora, minuto, true).show()
+                TimePickerDialog(contexto, temaDialogo, { _, h, m -> hora = h; minuto = m }, hora, minuto, true).show()
             }) { Text(String.format(Locale.ROOT, "Hora aproximada: %02d:%02d", hora, minuto), color = TextPrimary) }
             Text("Android puede retrasar el aviso para ahorrar batería. No se requiere acceso a tus alarmas.",
                 style = MaterialTheme.typography.bodySmall, color = TextSecondary)

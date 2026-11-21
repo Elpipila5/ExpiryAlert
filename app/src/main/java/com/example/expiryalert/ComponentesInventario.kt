@@ -10,7 +10,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -76,17 +75,17 @@ fun PaginaInventario(titulo: String, onVolver: () -> Unit, contenido: @Composabl
 
 @Composable
 fun PanelInventario(contenido: @Composable ColumnScope.() -> Unit) {
-    Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp),
+    Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp),
         color = SurfaceCard, border = BorderStroke(1.dp, BorderSubtle)) {
-        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = contenido)
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = contenido)
     }
 }
 
 @Composable
 fun BotonInventario(texto: String, habilitado: Boolean = true, onClick: () -> Unit) {
     Button(onClick, Modifier.fillMaxWidth().heightIn(min = 48.dp), enabled = habilitado,
-        shape = RoundedCornerShape(12.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = AccentDark, contentColor = Color.White)) {
+        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = AccentDark, contentColor = OnAccent)) {
         Text(texto, fontWeight = FontWeight.SemiBold)
     }
 }

@@ -22,13 +22,26 @@ android {
         applicationId = "com.example.expiryalert"
         minSdk = 24
         targetSdk = 37
-        versionCode = 5
-        versionName = "1.2.0-v21"
+        versionCode = 6
+        versionName = "1.3.0"
 
         // La clave de OpenAI permanece solo en el backend.
         buildConfigField("String", "RECETAS_API_BASE_URL", "\"$recetasApiUrl\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    sourceSets {
+        named("test") { kotlin.directories += "src/sharedTest/java" }
+        named("androidTest") { kotlin.directories += "src/sharedTest/java" }
+    }
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+        unitTests.all {
+            it.maxHeapSize = "1g"
+            it.systemProperty("robolectric.graphicsMode", "NATIVE")
+            it.systemProperty("expiry.qa.dir", layout.buildDirectory.dir("reports/diseno").get().asFile.absolutePath)
+        }
     }
 
     buildTypes {
@@ -65,6 +78,9 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     testImplementation(libs.junit)
+    testImplementation("org.robolectric:robolectric:4.16.1")
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
