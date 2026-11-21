@@ -1,5 +1,12 @@
 # Registro de cambios
 
+## 2026-11-21 - Actualización visible en el teléfono
+
+- Sincronización de v21 con main al detectar que conservaba el diseño anterior.
+- Actualizador Windows que verifica carpeta, commit, APK y versión instalada y abre la aplicación, conservando datos.
+- Prueba de arranque de MainActivity y cambio de tema: 19 casos Android y 72 locales aprobados.
+- Sintaxis y diagnóstico del actualizador comprobados en Windows; falta confirmar la instalación en el teléfono del usuario.
+
 ## 2026-11-21 - Validación de 1.3.0
 
 - CI ejecuta las pruebas instrumentadas en un emulador de Android 15 con API 35.
