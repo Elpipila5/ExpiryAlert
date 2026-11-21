@@ -1,6 +1,6 @@
 # Product Backlog
 
-Historias tomadas del plan de trabajo. La prioridad y los criterios se conservan; las tareas detalladas en GitHub sirven para descomponerlas. **Estado inicial: Pendiente de verificar para todas.** Los avances que ya existan deben demostrarse antes de cambiar este estado.
+Historias tomadas del plan de trabajo. La prioridad y los criterios se conservan; las tareas detalladas en GitHub sirven para descomponerlas. El estado actual y las evidencias están en [la lista de cierre de la versión candidata](pruebas/cierre-sprint9.md). Los issues se cierran después de cumplir sus criterios y la Definition of Done.
 
 | ID | Historia | Prioridad | Función | Sprint | Criterio de aceptación |
 | --- | --- | --- | --- | --- | --- |

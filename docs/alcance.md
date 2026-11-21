@@ -4,7 +4,7 @@
 
 Se organiza el repositorio a partir del [plan de trabajo](referencias/README.md#plan-de-trabajo), que detalla cantidades, OCR y nueve sprints. Es una decisión de organización para esta preparación; no acredita una aprobación del docente ni resuelve automáticamente las diferencias con la [Actividad 1](referencias/README.md#actividad-1).
 
-Los códigos F de las siguientes tablas corresponden al plan. Todas las funciones están **pendientes de verificar en el repositorio** hasta integrar y revisar el código existente.
+Los códigos F de las siguientes tablas corresponden al plan. La tabla describe los requisitos; el estado de implementación y las evidencias están en [la versión candidata](pruebas/cierre-sprint9.md). Una función implementada no equivale a aceptación completa en un teléfono.
 
 | ID | Funcionalidad | Prioridad | Dependencias | Resultado requerido |
 | --- | --- | --- | --- | --- |
@@ -19,7 +19,7 @@ Los códigos F de las siguientes tablas corresponden al plan. Todas las funcione
 | F09 | Rutina de desayuno | Media | F01 | Hora elegida por el usuario y pregunta contextual, con permisos opcionales. |
 | F10 | Recetas y contenido externo | Media | F04, F06 | Priorizar productos disponibles/próximos a caducar; enlaces o consulta externa. |
 
-Autenticación, almacenamiento, nube, validaciones, permisos, seguridad, errores y pruebas son transversales. El proveedor y el framework se confirman al revisar el proyecto existente.
+Autenticación, almacenamiento, nube, validaciones, permisos, seguridad, errores y pruebas son transversales. La implementación actual usa Kotlin, Jetpack Compose, Firebase Authentication y Cloud Firestore. Las compras, preferencias y fotos de perfil se guardan por cuenta en el dispositivo; el tema se guarda por dispositivo.
 
 ## Diferencias entre documentos
 

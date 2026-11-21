@@ -1,4 +1,4 @@
-# Seguridad de Firebase — entrega Sprint 5
+# Seguridad de Firebase — versión candidata
 
 ## Estado y alcance
 
@@ -10,7 +10,7 @@ Las reglas protegen la colección raíz `productos` y aplican:
 - En creación, `usuarioId` debe ser exactamente el UID autenticado y la cantidad inicial debe ser positiva.
 - En modificación, impiden cambiar de propietario o falsificar `fechaCreacion`, aunque la aplicación envíe `usuarioId` sin cambios.
 - La fecha puede quedar vacía para `caducidadPendiente`; las cantidades pueden ser decimales y llegar a cero al archivar.
-- Se rechazan campos inesperados por defecto; **esto requiere actualizar y probar las reglas al agregar F06–F10**.
+- Se rechazan campos inesperados por defecto. Los flujos actuales F06–F07 actualizan los campos ya admitidos `cantidad`, `cantidadInicial` y `ultimaConfirmacion`. Compras y preferencias son locales; no se añadieron colecciones para F08–F10. Cualquier ampliación del esquema requiere revisar las reglas.
 - Las reglas no reemplazan validación de cliente, no verifican la fecha real del calendario ni la calidad del OCR.
 
 ## Pasos antes de publicar
@@ -37,7 +37,7 @@ Antes de publicar, hay que validar **tanto que el propietario pueda usar la app 
 
 **Advertencias:** el simulador no significa que las reglas ya estén publicadas; no contiene automáticamente todos los documentos, permisos y flujos reales. No es recomendable utilizar `allow read, write: if true` como solución a `PERMISSION_DENIED`. Si la app deja de poder guardar tras publicar, revisar las diferencias entre el esquema guardado y el esquema validado antes de implementar otras funcionalidades.
 
-**Estado al 28/10/2026:** las reglas siguen preparadas en GitHub; en esta conversación no se ha confirmado su publicación ni los resultados del simulador.
+**Estado al 21/11/2026:** las reglas están versionadas en GitHub. No está confirmada su publicación en Firebase ni la validación del servidor con dos cuentas. Las pruebas Android de persistencia local no verifican los permisos de Firestore.
 
 ## Casos de seguridad
 
@@ -66,4 +66,4 @@ Se desactiva respaldo automático de la app para que preferencias locales, token
 
 - **No hay forma de verificar desde este repositorio qué reglas están actualmente desplegadas en Firebase.**
 - El User-Agent de Open Food Facts y la configuración cliente de Firebase no deben tratarse como credenciales de servidor; nunca subir una cuenta de servicio, claves privadas, contraseñas o tokens de CI al repositorio.
-- En futuras semanas, al incorporar movimientos de consumo, preferencias o lista de compras, será necesario ampliar reglas, consultas y pruebas de acceso para esas colecciones.
+- Si en una versión futura las compras, preferencias o el historial de consumo se sincronizan en Firestore, habrá que definir y comprobar las reglas de esas nuevas colecciones.

@@ -34,9 +34,17 @@ Comandos:
 .\gradlew.bat :app:connectedDebugAndroidTest
 ```
 
-Las capturas locales se generan en `app/build/reports/diseno`. CI usa JDK 25 para Gradle y JDK 21 para las pruebas. Robolectric usa API 27 con gráficos nativos. Las pruebas instrumentadas comparten los casos de prueba y usan la API del dispositivo; se compilaron, pero su ejecución sigue pendiente.
+Las capturas locales se generan en `app/build/reports/diseno`. CI usa JDK 25 para Gradle y JDK 21 para las pruebas locales. Robolectric usa API 27 con gráficos nativos.
 
-La ruta ImageDecoder de API 28+ y la interacción con el selector del sistema necesitan la comprobación en un teléfono. Los resultados locales y de CI no se presentan como aceptación en dispositivo.
+### Ejecución nativa posterior — 21/11/2026
+
+La [ejecución en Android 15](https://github.com/Elpipila5/ExpiryAlert/actions/runs/44928823005) del código `6a5a97045e465a94c9f41a00e663606bc2bb59ba` aprobó **18 pruebas instrumentadas**, con cero fallos, errores o casos omitidos. Incluye los 10 casos compartidos de diseño/fotos, cuatro de compras/preferencias, dos de avisos atendidos, el contexto de aplicación y una foto de prueba entregada mediante `content://`.
+
+La prueba de URI de contenido ejecuta `ImageDecoder` en API 35 y confirma que la copia guardada permanece después de borrar el original. La selección interactiva en la galería del usuario sigue pendiente de comprobación en su teléfono.
+
+Se revisaron capturas nativas del inicio oscuro y del perfil. El informe incluye 11 imágenes. El cambio de tema se mide en el centro del contenido y espera el fotograma actualizado; las esquinas pueden estar cubiertas por las barras del sistema. Las capturas adicionales se guardan mediante `additionalTestOutputDir` y Gradle las recupera antes de desinstalar los APK de prueba, en `app/build/outputs/connected_android_test_additional_output/`.
+
+Estos resultados corresponden a un emulador temporal y no acreditan la aceptación en el teléfono ni la configuración real de Firebase. El estado completo está en [la lista de cierre](cierre-sprint9.md).
 
 ## Comprobar en el teléfono
 

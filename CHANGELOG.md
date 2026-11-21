@@ -1,5 +1,12 @@
 # Registro de cambios
 
+## 2026-11-21 - Validación de 1.3.0
+
+- CI ejecuta las pruebas instrumentadas en un emulador de Android 15 con API 35.
+- 18 casos Android y 72 locales aprobados, sin fallos; APK generados y lint sin errores.
+- Prueba de foto mediante URI de contenido y recuperación automática de 11 capturas nativas.
+- Guías de instalación actualizadas a main y lista de cierre con pendientes de teléfono, Firebase y distribución.
+
 ## 2026-11-20 - 1.3.0
 
 - Diseño verde y menta con nueva bienvenida, iconos y tarjetas de producto.

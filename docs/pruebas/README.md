@@ -1,6 +1,11 @@
 # Pruebas y defectos
 
-La [matriz](matriz.md) prepara escenarios; **ninguno se da por ejecutado**. Añadir resultados al probar el código, identificando commit/build, dispositivo, fecha, responsable y evidencia.
+La [matriz](matriz.md) prepara escenarios manuales; sus resultados se registran al ejecutarlos. Las pruebas automatizadas tienen informes separados y no aprueban por sí solas los flujos completos del teléfono.
+
+- [Diseño y personalización 1.3.0](diseno-personalizacion.md): compilación, pruebas locales y comprobación del rediseño.
+- [Cantidades, compras, desayuno y recetas](v21-sprints6-9.md): implementación y matriz funcional.
+- [Cierre de la versión candidata](cierre-sprint9.md): estado actual y verificaciones de entrega pendientes.
+- [Resultados automatizados y APK](https://github.com/Elpipila5/ExpiryAlert/actions).
 
 ## Registro de ejecución
 

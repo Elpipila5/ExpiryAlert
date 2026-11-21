@@ -11,10 +11,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
-import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
@@ -89,10 +88,12 @@ abstract class DisenoAdaptableBase {
         return bitmap
     }
 
-    private fun guardarCaptura(nombre: String) {
+    private fun guardarCaptura(nombre: String, etiqueta: String = "captura") {
         val carpeta = (System.getProperty("expiry.qa.dir")?.let { File(it) }
+            ?: InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
+                ?.takeIf { it.isNotBlank() }?.let { File(it) }
             ?: File(contexto.getExternalFilesDir(null), "qa_diseno")).apply { mkdirs() }
-        val bitmap = capturarVista()
+        val bitmap = capturarVista(etiqueta)
         File(carpeta, "$nombre.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
         bitmap.recycle()
     }
@@ -128,13 +129,23 @@ abstract class DisenoAdaptableBase {
             }
         }
         fun luminosidad(): Float {
-            val mapa = capturarVista("tema").asImageBitmap().toPixelMap()
-            return mapa[mapa.width - 2, mapa.height - 2].luminance()
+            val captura = capturarVista("tema")
+            // Medir el contenido; las barras del sistema pueden cubrir los bordes.
+            val color = Color(captura.getPixel(captura.width / 2, captura.height / 2))
+            captura.recycle()
+            return color.luminance()
         }
-        assertTrue(luminosidad() > 0.8f)
+        val claro = luminosidad()
+        assertTrue("Luminosidad del fondo claro: $claro", claro > 0.8f)
+        guardarCaptura("cambio_tema_antes", "tema")
         compose.onNodeWithContentDescription("Activar modo oscuro").performClick()
         compose.onNodeWithContentDescription("Activar modo claro").assertIsDisplayed()
-        assertTrue(luminosidad() < 0.1f)
+        // Semántica y composición pueden adelantarse un fotograma a PixelCopy.
+        try {
+            compose.waitUntil(timeoutMillis = 5_000) { luminosidad() < 0.1f }
+        } finally { guardarCaptura("cambio_tema_despues", "tema") }
+        val oscuro = luminosidad()
+        assertTrue("Luminosidad del fondo oscuro: $oscuro", oscuro < 0.1f)
         assertTrue(ControlApariencia(contexto, false, preferencias).oscuro)
     }
 

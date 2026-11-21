@@ -1,5 +1,7 @@
 # Integración de recetas y funcionalidades del cronograma en v21
 
+Este documento registra la integración inicial de cantidades, compras, desayuno y recetas. La versión candidata actual está en **main**, versión **1.3.0**; consulta la [instalación actual](../instalacion.md) y el [estado de cierre](cierre-sprint9.md). La matriz siguiente sigue siendo la base de regresión funcional.
+
 Versión Android: `1.2.0-v21`, versionCode 5. Base: rama `v21`, commit `1fd11f4`.
 
 Esta versión conserva el perfil y el diseño minimalista de v21, integra las recetas de main con la lista de compras y añade los flujos funcionales de los sprints 6, 7 y 8. La aceptación en un teléfono y la revisión del equipo continúan siendo necesarias para cerrar el sprint 9.
@@ -54,7 +56,7 @@ En Android Studio:
 
 | Caso | Pasos y resultado esperado | Estado |
 | --- | --- | --- |
-| V21-01 | Instalar y comprobar versión 1.2.0-v21; perfil, inicio y tarjetas conservan el diseño de v21. | Pendiente |
+| V21-01 | Instalar la versión candidata actual indicada en el cierre; comprobar perfil, inicio y tarjetas con el diseño correspondiente. | Pendiente |
 | V21-02 | Sin inventario: recetas muestra ideas con todos los ingredientes por comprar. | Pendiente |
 | V21-03 | Solo tortillas: quesadillas con queso faltante. Añadir queso: quesadillas completas. | Pendiente |
 | V21-04 | Agregar faltantes de una receta a Compras dos veces: no duplicar pendientes. Copiar faltantes y abrir YouTube. | Pendiente |
