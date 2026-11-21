@@ -25,6 +25,33 @@
 
 ## Comandos desde la raíz
 
+### Si la pantalla sigue mostrando una versión anterior
+
+Abre **Terminal dentro de Android Studio**, en la carpeta del proyecto que estás ejecutando. Con el teléfono conectado y autorizado, ejecuta en Windows:
+
+```powershell
+git pull --ff-only
+.\Actualizar-ExpiryAlert.cmd
+```
+
+El actualizador muestra la carpeta y el commit, descarga `main`, limpia únicamente la compilación, genera el APK, lo instala con `adb install -r`, verifica su versión dentro del dispositivo y abre `.MainActivity`. No desinstala la aplicación ni borra sus datos. Se detiene ante cambios locales, una rama divergente, una firma incompatible o varios dispositivos sin seleccionar.
+
+Si hay varios dispositivos, puedes elegir el serial que muestra `adb devices`:
+
+```powershell
+.\Actualizar-ExpiryAlert.cmd -Dispositivo SERIAL
+```
+
+Para consultar el diagnóstico sin modificar el repositorio ni instalar:
+
+```powershell
+.\Actualizar-ExpiryAlert.cmd -SoloDiagnostico
+```
+
+La última línea indica dónde se guardó el registro local. El script comprueba la instalación; el aspecto y funcionamiento en el teléfono se confirman al abrirla.
+
+### Compilación manual
+
 En macOS/Linux:
 
 ```bash

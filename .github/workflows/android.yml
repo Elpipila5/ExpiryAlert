@@ -2,7 +2,7 @@ name: Android CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, v21]
     paths:
       - 'app/**'
       - 'gradle/**'
@@ -11,6 +11,8 @@ on:
       - 'gradlew*'
       - '.github/workflows/android.yml'
       - '.github/scripts/pruebas-android.sh'
+      - 'scripts/**'
+      - 'Actualizar-ExpiryAlert.cmd'
   pull_request:
     branches: [main]
     paths:
@@ -21,6 +23,8 @@ on:
       - 'gradlew*'
       - '.github/workflows/android.yml'
       - '.github/scripts/pruebas-android.sh'
+      - 'scripts/**'
+      - 'Actualizar-ExpiryAlert.cmd'
   workflow_dispatch:
 
 permissions:
@@ -31,6 +35,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  instalador:
+    name: Actualizacion desde Windows
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Revisar sintaxis y ejecutar diagnostico
+        shell: powershell
+        run: |
+          $errores = $null
+          $tokens = $null
+          [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $pwd 'scripts/Actualizar-ExpiryAlert.ps1'), [ref]$tokens, [ref]$errores) | Out-Null
+          if ($errores.Count -gt 0) { $errores | Format-List; exit 1 }
+          & .\Actualizar-ExpiryAlert.cmd -SoloDiagnostico
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
   comprobar:
     runs-on: ubuntu-latest
     timeout-minutes: 30
