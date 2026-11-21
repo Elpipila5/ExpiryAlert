@@ -15,22 +15,28 @@ Versión Android: `1.3.0`, versionCode 6. Continúa la integración de los sprin
 
 ## Verificación
 
-La versión inicial del rediseño compiló, generó APK de aplicación y APK de pruebas, pasó las 62 pruebas de lógica y terminó lint sin errores. Se revisaron capturas renderizadas del inicio claro, oscuro y del perfil.
+[Android CI completó la compilación y validación](https://github.com/Elpipila5/ExpiryAlert/actions/runs/44871523149) del código `ab785db4fd4e17fb1c9b9acc422634e94674d6a2`:
 
-Se añadieron 10 casos compartidos entre pruebas locales Robolectric y pruebas Android: botón a 320 dp y escala de fuente 1.6, resumen a 320 dp, resumen oscuro con escala 1.5, cambio efectivo del fondo y persistencia del tema, inicio y producto en ambos temas, perfil y resumen, persistencia de foto tras borrar su origen, separación de cuentas y eliminación aislada. La suite completa contiene 72 casos locales.
+- 72 pruebas locales aprobadas, sin fallos: 62 de la lógica existente y 10 nuevas de diseño y personalización.
+- `:app:assembleDebug`: APK de aplicación generado.
+- `:app:assembleDebugAndroidTest`: APK de pruebas instrumentadas generado.
+- `:app:lintDebug`: completado sin errores.
+- Informes, capturas renderizadas y APK conservados como artefactos de esa ejecución.
 
-En la última ejecución local completada pasaron los tres casos de fotos, el cambio de tema y los casos de resumen. Tres comprobaciones de texto del botón detectaron el ancho reservado del párrafo centrado; se corrigió la aserción para medir el ancho de cada línea dibujada, sin permitir elipsis ni recorte de altura. La ejecución final se interrumpió al perderse el entorno. El resultado del código publicado debe comprobarse en la ejecución de Android CI y no se deduce de la compilación previa.
+Se revisaron capturas locales del inicio claro, oscuro y del perfil. Los 10 casos nuevos comprueban: botón a 320 dp y fuente 1.6, resumen a 320 dp, resumen oscuro con fuente 1.5, cambio efectivo del fondo y persistencia del tema, inicio y producto en ambos temas, perfil y resumen, persistencia de foto tras borrar su origen, separación de cuentas y eliminación aislada.
+
+Las comprobaciones de texto miden el ancho de cada línea dibujada y rechazan elipsis y recorte de altura. Se evita confundir el ancho reservado de un párrafo centrado con su texto visible.
 
 Comandos:
 
 ```powershell
-.\gradlew.bat :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug
-.\gradlew.bat :app:connectedDebugAndroidTest
+.\\gradlew.bat :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug
+.\\gradlew.bat :app:connectedDebugAndroidTest
 ```
 
-Las capturas de las pruebas locales se generan en `app/build/reports/diseno`. Robolectric usa API 27 con gráficos nativos; las pruebas instrumentadas ejercitan las mismas reglas sobre la API del teléfono. La ruta ImageDecoder de API 28+ y la interacción con el selector del sistema requieren la comprobación en dispositivo.
+Las capturas locales se generan en `app/build/reports/diseno`. CI usa JDK 25 para Gradle y JDK 21 para las pruebas. Robolectric usa API 27 con gráficos nativos. Las pruebas instrumentadas comparten los casos de prueba y usan la API del dispositivo; se compilaron, pero su ejecución sigue pendiente.
 
-El emulador de este entorno arrancó, pero rechazó la instalación por `INSTALL_FAILED_VERIFICATION_FAILURE` (espera agotada del verificador de integridad). Por ello las pruebas instrumentadas no se consideran ejecutadas.
+La ruta ImageDecoder de API 28+ y la interacción con el selector del sistema necesitan la comprobación en un teléfono. Los resultados locales y de CI no se presentan como aceptación en dispositivo.
 
 ## Comprobar en el teléfono
 

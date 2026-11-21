@@ -18,7 +18,7 @@ El botón de luna/sol cambia toda la aplicación y recuerda la elección en este
 
 Productos y cantidades se mantienen en Firebase. Compras y preferencias se conservan por cuenta en el dispositivo. El recordatorio de desayuno funciona con WorkManager y puede retrasarse por las restricciones de batería de Android.
 
-La suite incluye **72 pruebas**: 62 de la lógica existente y 10 de diseño y personalización. Las nuevas verifican etiquetas completas a 320 dp, fuentes grandes, cambio real de colores, persistencia del tema, fotos separadas por cuenta y copias independientes de la galería. Consulta [los cambios y la validación de 1.3.0](docs/pruebas/diseno-personalizacion.md) y [la matriz funcional de los sprints 6 a 9](docs/pruebas/v21-sprints6-9.md). La aceptación en el teléfono sigue pendiente.
+Android CI compiló la aplicación y aprobó **72 pruebas**: 62 de la lógica existente y 10 de diseño y personalización. Las nuevas verifican etiquetas completas a 320 dp, fuentes grandes, cambio real de colores, persistencia del tema, fotos separadas por cuenta y copias independientes de la galería. Consulta [los cambios y la validación de 1.3.0](docs/pruebas/diseno-personalizacion.md) y [la matriz funcional de los sprints 6 a 9](docs/pruebas/v21-sprints6-9.md). La aceptación en el teléfono sigue pendiente.
 
 - [Pruebas F10 del Sprint 7](docs/pruebas/sprint7-recetas.md)
 - [Backend IA anterior, opcional y no conectado a esta interfaz](backend/README.md)

@@ -9,6 +9,7 @@
 - Selección, cambio y eliminación de foto de perfil, con archivos separados por cuenta.
 - Colores de formularios, diálogos y selectores de fecha/hora adaptados al tema.
 - Diez pruebas nuevas de diseño y personalización, compartidas entre Robolectric y Android.
+- Android CI: 72 pruebas aprobadas, ambos APK generados y lint sin errores; aceptación en teléfono pendiente.
 - Validación y pasos para el teléfono en `docs/pruebas/diseno-personalizacion.md`.
 
 ## 2026-11-19 - 1.2.0-v21
