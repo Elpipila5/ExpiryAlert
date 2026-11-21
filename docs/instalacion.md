@@ -1,6 +1,6 @@
 # Instalación y ejecución de ExpiryAlert
 
-> Actualizado para el Sprint 5 (26–30 de octubre de 2026). Los pasos están basados en los archivos actuales del repositorio. Se deben confirmar en el dispositivo de cada integrante.
+> Versión candidata 1.3.0. Los pasos corresponden a `main`; la aceptación final en el teléfono se registra por separado de las pruebas automatizadas.
 
 ## Tecnología real
 
@@ -16,12 +16,12 @@
 ## Abrir en Android Studio
 
 1. Clonar `https://github.com/Elpipila5/ExpiryAlert.git` (o `Git → Fetch` si ya existe).
-2. Cambiar a la rama que se desea probar. Para cambios de esta semana: `feature/sprint5-integracion-seguridad-pruebas`.
+2. En GitHub Desktop seleccionar **main → Fetch origin → Pull origin**. En la terminal se puede usar `git switch main` y `git pull --ff-only origin main`. Conservar cualquier cambio local antes de cambiar de rama.
 3. Abrir la **carpeta raíz** del repositorio, donde están `settings.gradle.kts`, `gradlew` y `gradle/libs.versions.toml`.
 4. Sincronizar Gradle. Usar un Android SDK con API 37 instalada según la configuración del proyecto.
 5. Configurar Firebase Authentication con Email/Password y Cloud Firestore en el proyecto Firebase del equipo, respetando las reglas de seguridad. El archivo cliente `app/google-services.json` ya está referenciado; no subir credenciales privadas de administrador.
 6. Ejecutar sobre un móvil o emulador compatible. Para el lector automático de código de barras se necesita Google Play Services; si no está disponible, introducir el código manualmente.
-7. Probar registro, ingreso, inventario, OCR, código de barras, alertas y confirmaciones.
+7. Comprobar que **Mi perfil** muestra la versión **1.3.0**. Probar inventario, recetas, consumo, compras, desayuno, modo oscuro y foto de perfil según la [lista de cierre](pruebas/cierre-sprint9.md).
 
 ## Comandos desde la raíz
 
@@ -45,9 +45,11 @@ Si la compilación funciona, el APK de depuración se genera normalmente en `app
 
 Este repositorio incluye `firestore.rules`, **pero no se aplica al proyecto Firebase al realizar un pull**. Antes de usar las reglas, seguir [Seguridad Firestore](seguridad-firestore.md) y combinar con cualquier configuración preexistente. En caso de `PERMISSION_DENIED`, verificar que se publicaron las reglas compatibles, la sesión actual y los campos enviados.
 
-## Casos prioritarios para la entrega semanal
+## Casos prioritarios para la entrega
 
-Seguir [Sprint 5 — integración y evidencias](pruebas/sprint5-integracion.md). Registrar para cada prueba dispositivo, versión Android, commit y resultado real. Los fallos se documentan en issues, no se ocultan en la presentación.
+Seguir la [lista de cierre de la versión candidata](pruebas/cierre-sprint9.md), la [matriz de cantidades, compras y desayuno](pruebas/v21-sprints6-9.md) y las [pruebas de diseño y personalización](pruebas/diseno-personalizacion.md). Registrar dispositivo, versión Android, commit y resultado real.
+
+CI genera un APK de depuración y los informes en [GitHub Actions](https://github.com/Elpipila5/ExpiryAlert/actions). Para actualizar la instalación que ya usas, ejecuta **Run** desde tu Android Studio con la misma clave de depuración. Una compilación de CI puede usar una clave diferente. No borres los datos de la aplicación como paso de actualización: fotos, compras y preferencias son locales.
 
 ## Solución de problemas frecuentes
 

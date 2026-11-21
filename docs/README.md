@@ -9,10 +9,11 @@
 | [Equipo](equipo.md) | Responsabilidades, eventos y Definition of Done. |
 | [Arquitectura](arquitectura.md) | Propuesta para separar responsabilidades del código. |
 | [Modelo de datos](modelo-datos.md) | Propuesta de entidades y reglas de validación. |
-| [Instalación](instalacion.md) | Instrucciones que completará la primera integración de código. |
+| [Instalación](instalacion.md) | Actualizar desde main, configurar y ejecutar la versión candidata. |
 | [Decisiones](decisiones.md) | Tecnología y cambios de alcance por confirmar. |
 | [Riesgos](riesgos.md) | Contingencias previstas en el plan. |
 | [Pruebas](pruebas/README.md) | Matriz y registro de resultados. |
+| [Cierre de versión candidata](pruebas/cierre-sprint9.md) | Evidencias actuales y verificaciones pendientes para la entrega. |
 | [Evidencias](evidencias/README.md) | Plantilla de review, retrospectiva y enlaces a builds. |
 | [Referencias](referencias/README.md) | Identificación de los documentos fuente. |
 
