@@ -35,10 +35,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.expiryalert.ui.theme.ExpiryAlertTheme
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.UserProfileChangeRequest
@@ -52,25 +50,6 @@ typealias ProductoMapa = Map<String, Any>
 
 private fun mapaVacio(): ProductoMapa = emptyMap()
 private fun listaProductosVacia(): List<ProductoMapa> = emptyList()
-
-// ----------------------------------------------------
-// PALETA MINIMALISTA Y ELEGANTE
-// ----------------------------------------------------
-internal val BgPrimary = Color(0xFFFAFAFA)       // Blanco hueso muy sutil
-internal val SurfaceCard = Color(0xFFFFFFFF)     // Blanco puro
-internal val SurfaceMuted = Color(0xFFF4F4F5)    // Gris tenue para inputs y píldoras
-internal val BorderSubtle = Color(0xFFE4E4E7)    // Borde fino elegante
-internal val TextPrimary = Color(0xFF18181B)     // Negro carbón suave
-internal val TextSecondary = Color(0xFF71717A)   // Gris neutro para subtítulos
-internal val AccentDark = Color(0xFF18181B)      // Botón principal minimalista
-internal val AccentSage = Color(0xFF0F766E)      // Verde salvia profundo (Recetas / Seguro)
-
-internal val StatusSafe = Color(0xFF15803D)
-internal val StatusSafeBg = Color(0xFFF0FDF4)
-internal val StatusWarn = Color(0xFFB45309)
-internal val StatusWarnBg = Color(0xFFFFFBEB)
-internal val StatusDanger = Color(0xFFB91C1C)
-internal val StatusDangerBg = Color(0xFFFEF2F2)
 
 class MainActivity : ComponentActivity() {
 
@@ -171,7 +150,7 @@ class MainActivity : ComponentActivity() {
     }
 
     setContent {
-      ExpiryAlertTheme {
+      ExpiryAlertPersonalizado {
         ExpiryAlertApp(
           destinoUid = destinoUid,
           destinoPantalla = destinoPantalla,
@@ -248,36 +227,19 @@ fun CampoTextoMinimalista(
 
 @Composable
 fun CabeceraNavegacion(titulo: String, onRegresar: () -> Unit) {
-  Row(
-    modifier = Modifier
-      .fillMaxWidth()
-      .padding(bottom = 24.dp),
-    verticalAlignment = Alignment.CenterVertically,
-    horizontalArrangement = Arrangement.SpaceBetween
-  ) {
-    Surface(
-      onClick = onRegresar,
-      shape = RoundedCornerShape(10.dp),
-      color = SurfaceCard,
-      border = BorderStroke(1.dp, BorderSubtle)
-    ) {
-      Text(
-        text = "← Volver",
-        fontSize = 14.sp,
-        fontWeight = FontWeight.Medium,
-        color = TextPrimary,
-        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
-      )
+  Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    FilledTonalIconButton(onRegresar, Modifier.size(44.dp),
+      shape = RoundedCornerShape(16.dp),
+      colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = SurfaceCard, contentColor = TextPrimary)) {
+      Icon(IconosExpiry.Atras, "Volver", Modifier.size(22.dp))
     }
-    Text(
-      text = titulo,
-      fontSize = 17.sp,
-      fontWeight = FontWeight.SemiBold,
-      color = TextPrimary
-    )
-    Spacer(modifier = Modifier.width(76.dp))
+    Text(titulo, Modifier.weight(1f), style = MaterialTheme.typography.titleLarge,
+      color = TextPrimary, fontWeight = FontWeight.Bold)
+    BotonModoOscuro()
   }
 }
+
 
 @Composable
 fun ExpiryAlertApp(
@@ -413,119 +375,11 @@ fun ExpiryAlertApp(
 
 @Composable
 fun PantallaInicio(irLogin: () -> Unit, irRegistro: () -> Unit) {
-  Column(
-    modifier = Modifier
-      .fillMaxSize()
-      .background(BgPrimary)
-      .padding(horizontal = 28.dp)
-      .padding(top = 90.dp, bottom = 36.dp),
-    horizontalAlignment = Alignment.Start
-  ) {
-    Surface(
-      shape = RoundedCornerShape(14.dp),
-      color = AccentDark,
-      modifier = Modifier.size(48.dp)
-    ) {
-      Box(contentAlignment = Alignment.Center) {
-        Text(
-          text = "EA",
-          color = Color.White,
-          fontSize = 16.sp,
-          fontWeight = FontWeight.Bold,
-          letterSpacing = 1.sp
-        )
-      }
-    }
-
-    Spacer(modifier = Modifier.height(28.dp))
-
-    Text(
-      text = "ExpiryAlert",
-      fontSize = 36.sp,
-      fontWeight = FontWeight.Bold,
-      color = TextPrimary,
-      letterSpacing = (-1).sp
-    )
-
-    Spacer(modifier = Modifier.height(10.dp))
-
-    Text(
-      text = "Gestión inteligente de inventario y control de caducidades sin distracciones.",
-      fontSize = 16.sp,
-      color = TextSecondary,
-      lineHeight = 24.sp
-    )
-
-    Spacer(modifier = Modifier.height(36.dp))
-
-    Surface(
-      modifier = Modifier.fillMaxWidth(),
-      shape = RoundedCornerShape(16.dp),
-      color = SurfaceCard,
-      border = BorderStroke(1.dp, BorderSubtle)
-    ) {
-      Column(
-        modifier = Modifier.padding(22.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-      ) {
-        ItemCaracteristica("Escaneo rápido", "Códigos de barras y lectura óptica de fechas.")
-        HorizontalDivider(color = SurfaceMuted)
-        ItemCaracteristica("Alertas oportunas", "Notificaciones antes de que tus productos venzan.")
-        HorizontalDivider(color = SurfaceMuted)
-        ItemCaracteristica("Cocina sin desperdicio", "Sugerencias de recetas basadas en tu despensa.")
-      }
-    }
-
-    Spacer(modifier = Modifier.weight(1f))
-
-    Button(
-      onClick = irLogin,
-      modifier = Modifier
-        .fillMaxWidth()
-        .height(52.dp),
-      shape = RoundedCornerShape(12.dp),
-      colors = ButtonDefaults.buttonColors(containerColor = AccentDark, contentColor = Color.White)
-    ) {
-      Text(text = "Iniciar sesión", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-    }
-
-    Spacer(modifier = Modifier.height(12.dp))
-
-    OutlinedButton(
-      onClick = irRegistro,
-      modifier = Modifier
-        .fillMaxWidth()
-        .height(52.dp),
-      shape = RoundedCornerShape(12.dp),
-      border = BorderStroke(1.dp, BorderSubtle),
-      colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary)
-    ) {
-      Text(text = "Crear una cuenta", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-    }
-  }
+  BienvenidaInicio(irLogin, irRegistro)
 }
 
-@Composable
-private fun ItemCaracteristica(titulo: String, descripcion: String) {
-  Row(verticalAlignment = Alignment.Top) {
-    Box(
-      modifier = Modifier
-        .padding(top = 6.dp)
-        .size(6.dp)
-        .clip(CircleShape)
-        .background(AccentSage)
-    )
-    Spacer(modifier = Modifier.width(12.dp))
-    Column {
-      Text(text = titulo, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-      Text(text = descripcion, fontSize = 13.sp, color = TextSecondary)
-    }
-  }
-}
 
-// ----------------------------------------------------
-// INICIAR SESIÓN
-// ----------------------------------------------------
+
 
 @Composable
 fun PantallaLogin(regresar: () -> Unit, irRegistro: () -> Unit, loginExitoso: () -> Unit) {
@@ -539,6 +393,8 @@ fun PantallaLogin(regresar: () -> Unit, irRegistro: () -> Unit, loginExitoso: ()
     modifier = Modifier
       .fillMaxSize()
       .background(BgPrimary)
+      .safeDrawingPadding()
+      .imePadding()
       .verticalScroll(rememberScrollState())
       .padding(horizontal = 24.dp)
       .padding(top = 56.dp, bottom = 30.dp)
@@ -604,12 +460,12 @@ fun PantallaLogin(regresar: () -> Unit, irRegistro: () -> Unit, loginExitoso: ()
           enabled = !cargando,
           modifier = Modifier
             .fillMaxWidth()
-            .height(50.dp),
-          colors = ButtonDefaults.buttonColors(containerColor = AccentDark, contentColor = Color.White),
+            .heightIn(min = 50.dp),
+          colors = ButtonDefaults.buttonColors(containerColor = AccentDark, contentColor = OnAccent),
           shape = RoundedCornerShape(12.dp)
         ) {
           if (cargando) {
-            CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+            CircularProgressIndicator(modifier = Modifier.size(20.dp), color = OnAccent, strokeWidth = 2.dp)
           } else {
             Text(text = "Continuar", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
           }
@@ -650,6 +506,8 @@ fun PantallaRegistro(regresar: () -> Unit, irLogin: () -> Unit, registroExitoso:
     modifier = Modifier
       .fillMaxSize()
       .background(BgPrimary)
+      .safeDrawingPadding()
+      .imePadding()
       .verticalScroll(rememberScrollState())
       .padding(horizontal = 24.dp)
       .padding(top = 56.dp, bottom = 30.dp)
@@ -744,12 +602,12 @@ fun PantallaRegistro(regresar: () -> Unit, irLogin: () -> Unit, registroExitoso:
           enabled = !cargando,
           modifier = Modifier
             .fillMaxWidth()
-            .height(50.dp),
-          colors = ButtonDefaults.buttonColors(containerColor = AccentDark, contentColor = Color.White),
+            .heightIn(min = 50.dp),
+          colors = ButtonDefaults.buttonColors(containerColor = AccentDark, contentColor = OnAccent),
           shape = RoundedCornerShape(12.dp)
         ) {
           if (cargando) {
-            CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+            CircularProgressIndicator(modifier = Modifier.size(20.dp), color = OnAccent, strokeWidth = 2.dp)
           } else {
             Text(text = "Crear cuenta", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
           }
@@ -776,285 +634,11 @@ fun PantallaRegistro(regresar: () -> Unit, irLogin: () -> Unit, registroExitoso:
 // PANTALLA DE PERFIL DE USUARIO
 // ----------------------------------------------------
 
-@Composable
-fun PantallaPerfil(regresar: () -> Unit, irAjustes: () -> Unit, cerrarSesion: () -> Unit) {
-  val context = LocalContext.current
-  val usuario = FirebaseAuth.getInstance().currentUser
-  val db = FirebaseFirestore.getInstance()
 
-  var nombreEditable by remember { mutableStateOf(usuario?.displayName.orEmpty()) }
-  var guardandoNombre by remember { mutableStateOf(false) }
-  var editandoNombre by remember { mutableStateOf(false) }
 
-  var totalProductos by remember { mutableIntStateOf(0) }
-  var seguros by remember { mutableIntStateOf(0) }
-  var porVencer by remember { mutableIntStateOf(0) }
-  var vencidos by remember { mutableIntStateOf(0) }
 
-  LaunchedEffect(usuario?.uid) {
-    usuario?.uid?.let { uid ->
-      db.collection("productos").whereEqualTo("usuarioId", uid).get().addOnSuccessListener { snapshot ->
-        val lista = snapshot.documents.mapNotNull { doc ->
-          InventarioProductos.productoVisible(doc.id, doc.data)
-        }
-        totalProductos = lista.size
-        seguros = lista.count { calcularEstadoCaducidad(it["fechaCaducidad"]?.toString().orEmpty()) == "Seguro" }
-        porVencer = lista.count { calcularEstadoCaducidad(it["fechaCaducidad"]?.toString().orEmpty()) == "Próximo a caducar" }
-        vencidos = lista.count { calcularEstadoCaducidad(it["fechaCaducidad"]?.toString().orEmpty()) == "Vencido" }
-      }
-    }
-  }
 
-  val inicial = remember(nombreEditable, usuario?.email) {
-    val base = nombreEditable.ifBlank { usuario?.email ?: "U" }
-    base.trim().firstOrNull()?.uppercaseChar()?.toString() ?: "U"
-  }
 
-  val fechaCreacionCuenta = remember(usuario) {
-    usuario?.metadata?.creationTimestamp?.let { ts ->
-      if (ts > 0) SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(ts) else null
-    } ?: "Reciente"
-  }
-
-  Column(
-    modifier = Modifier
-      .fillMaxSize()
-      .background(BgPrimary)
-      .verticalScroll(rememberScrollState())
-      .padding(horizontal = 24.dp)
-      .padding(top = 56.dp, bottom = 36.dp)
-  ) {
-    CabeceraNavegacion(titulo = "Perfil", onRegresar = regresar)
-
-    Surface(
-      modifier = Modifier.fillMaxWidth(),
-      shape = RoundedCornerShape(16.dp),
-      color = SurfaceCard,
-      border = BorderStroke(1.dp, BorderSubtle)
-    ) {
-      Column(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-      ) {
-        Box(
-          modifier = Modifier
-            .size(72.dp)
-            .clip(CircleShape)
-            .background(AccentDark),
-          contentAlignment = Alignment.Center
-        ) {
-          Text(text = inicial, fontSize = 28.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        if (!editandoNombre) {
-          Text(
-            text = nombreEditable.ifBlank { "Usuario" },
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = TextPrimary,
-            textAlign = TextAlign.Center
-          )
-          Spacer(modifier = Modifier.height(4.dp))
-          Text(text = usuario?.email ?: "Sin correo asociado", fontSize = 14.sp, color = TextSecondary)
-          Spacer(modifier = Modifier.height(16.dp))
-          OutlinedButton(
-            onClick = { editandoNombre = true },
-            shape = RoundedCornerShape(10.dp),
-            border = BorderStroke(1.dp, BorderSubtle),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-          ) {
-            Text("Editar nombre", fontSize = 13.sp, color = TextPrimary, fontWeight = FontWeight.Medium)
-          }
-        } else {
-          CampoTextoMinimalista(
-            value = nombreEditable,
-            onValueChange = { nombreEditable = it },
-            label = "Nombre para mostrar"
-          )
-          Spacer(modifier = Modifier.height(14.dp))
-          Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedButton(
-              onClick = {
-                nombreEditable = usuario?.displayName.orEmpty()
-                editandoNombre = false
-              },
-              modifier = Modifier.weight(1f),
-              shape = RoundedCornerShape(10.dp),
-              border = BorderStroke(1.dp, BorderSubtle)
-            ) {
-              Text("Cancelar", color = TextSecondary)
-            }
-            Button(
-              onClick = {
-                if (nombreEditable.isBlank()) {
-                  Toast.makeText(context, "Escribe un nombre válido", Toast.LENGTH_SHORT).show()
-                } else {
-                  guardandoNombre = true
-                  val req = UserProfileChangeRequest.Builder().setDisplayName(nombreEditable.trim()).build()
-                  usuario?.updateProfile(req)?.addOnCompleteListener { task ->
-                    guardandoNombre = false
-                    if (task.isSuccessful) {
-                      editandoNombre = false
-                      Toast.makeText(context, "Nombre actualizado", Toast.LENGTH_SHORT).show()
-                    } else {
-                      Toast.makeText(context, "No se pudo actualizar", Toast.LENGTH_SHORT).show()
-                    }
-                  }
-                }
-              },
-              enabled = !guardandoNombre,
-              modifier = Modifier.weight(1f),
-              shape = RoundedCornerShape(10.dp),
-              colors = ButtonDefaults.buttonColors(containerColor = AccentDark)
-            ) {
-              Text(if (guardandoNombre) "Guardando..." else "Guardar", color = Color.White)
-            }
-          }
-        }
-      }
-    }
-
-    Spacer(modifier = Modifier.height(18.dp))
-
-    Text(
-      text = "RESUMEN DE DESPENSA",
-      fontSize = 12.sp,
-      fontWeight = FontWeight.SemiBold,
-      color = TextSecondary,
-      letterSpacing = 0.8.sp,
-      modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
-    )
-
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-      EstadisticaMiniCard(Modifier.weight(1f), "Activos", totalProductos.toString(), TextPrimary)
-      EstadisticaMiniCard(Modifier.weight(1f), "En orden", seguros.toString(), StatusSafe)
-      EstadisticaMiniCard(Modifier.weight(1f), "Por vencer", porVencer.toString(), StatusWarn)
-      EstadisticaMiniCard(Modifier.weight(1f), "Vencidos", vencidos.toString(), StatusDanger)
-    }
-
-    Spacer(modifier = Modifier.height(22.dp))
-
-    Text(
-      text = "PREFERENCIAS Y CUENTA",
-      fontSize = 12.sp,
-      fontWeight = FontWeight.SemiBold,
-      color = TextSecondary,
-      letterSpacing = 0.8.sp,
-      modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
-    )
-
-    Surface(
-      modifier = Modifier.fillMaxWidth(),
-      shape = RoundedCornerShape(16.dp),
-      color = SurfaceCard,
-      border = BorderStroke(1.dp, BorderSubtle)
-    ) {
-      Column(modifier = Modifier.padding(20.dp)) {
-        OutlinedButton(onClick = irAjustes, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(10.dp)) {
-          Text("Inventario y horario de desayuno", color = TextPrimary)
-        }
-        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = SurfaceMuted)
-        FilaDetallePerfil("Miembro desde", fechaCreacionCuenta)
-        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = SurfaceMuted)
-        FilaDetallePerfil("ID de cuenta", "${usuario?.uid?.take(10) ?: "N/A"}…")
-        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = SurfaceMuted)
-        OutlinedButton(
-          onClick = {
-            NotificationHelper.mostrarNotificacionPrueba(context)
-            Toast.makeText(context, "Notificación enviada", Toast.LENGTH_SHORT).show()
-          },
-          modifier = Modifier.fillMaxWidth(),
-          shape = RoundedCornerShape(10.dp),
-          border = BorderStroke(1.dp, BorderSubtle)
-        ) {
-          Text("Enviar notificación de prueba", color = TextPrimary, fontSize = 13.sp)
-        }
-      }
-    }
-
-    Spacer(modifier = Modifier.height(24.dp))
-
-    OutlinedButton(
-      onClick = cerrarSesion,
-      modifier = Modifier
-        .fillMaxWidth()
-        .height(50.dp),
-      shape = RoundedCornerShape(12.dp),
-      border = BorderStroke(1.dp, Color(0xFFFECACA)),
-      colors = ButtonDefaults.outlinedButtonColors(
-        containerColor = StatusDangerBg,
-        contentColor = StatusDanger
-      )
-    ) {
-      Text(text = "Cerrar sesión", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-    }
-  }
-}
-
-@Composable
-private fun FilaDetallePerfil(etiqueta: String, valor: String) {
-  Row(
-    modifier = Modifier.fillMaxWidth(),
-    horizontalArrangement = Arrangement.SpaceBetween,
-    verticalAlignment = Alignment.CenterVertically
-  ) {
-    Text(text = etiqueta, fontSize = 14.sp, color = TextSecondary)
-    Text(text = valor, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
-  }
-}
-
-@Composable
-fun EstadisticaMiniCard(
-  modifier: Modifier = Modifier,
-  titulo: String,
-  valor: String,
-  colorIndicador: Color
-) {
-  Surface(
-    modifier = modifier,
-    shape = RoundedCornerShape(14.dp),
-    color = SurfaceCard,
-    border = BorderStroke(1.dp, BorderSubtle)
-  ) {
-    Column(
-      modifier = Modifier.padding(vertical = 14.dp, horizontal = 10.dp),
-      horizontalAlignment = Alignment.Start
-    ) {
-      Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-          modifier = Modifier
-            .size(7.dp)
-            .clip(CircleShape)
-            .background(colorIndicador)
-        )
-        Spacer(modifier = Modifier.width(6.dp))
-        Text(
-          text = titulo,
-          fontSize = 11.sp,
-          fontWeight = FontWeight.Medium,
-          color = TextSecondary,
-          maxLines = 1,
-          overflow = TextOverflow.Ellipsis
-        )
-      }
-      Spacer(modifier = Modifier.height(6.dp))
-      Text(
-        text = valor,
-        fontSize = 22.sp,
-        fontWeight = FontWeight.Bold,
-        color = TextPrimary
-      )
-    }
-  }
-}
-
-// ----------------------------------------------------
-// PANTALLA PRINCIPAL
-// ----------------------------------------------------
 
 @Composable
 fun PantallaPrincipal(
@@ -1098,10 +682,6 @@ fun PantallaPrincipal(
     val display = usuario?.displayName
     if (!display.isNullOrBlank()) display
     else usuario?.email?.substringBefore("@")?.replaceFirstChar { it.uppercase() } ?: "Usuario"
-  }
-
-  val inicialAvatar = remember(nombreMostrado) {
-    nombreMostrado.trim().firstOrNull()?.uppercaseChar()?.toString() ?: "U"
   }
 
   val conteoSeguros = remember(productos) {
@@ -1173,7 +753,7 @@ fun PantallaPrincipal(
                 }
             }
           },
-          colors = ButtonDefaults.buttonColors(containerColor = StatusDanger, contentColor = Color.White),
+          colors = ButtonDefaults.buttonColors(containerColor = StatusDanger, contentColor = MaterialTheme.colorScheme.onError),
           shape = RoundedCornerShape(10.dp)
         ) {
           Text(text = "Eliminar", fontWeight = FontWeight.SemiBold)
@@ -1191,106 +771,27 @@ fun PantallaPrincipal(
     modifier = Modifier
       .fillMaxSize()
       .background(BgPrimary)
+      .safeDrawingPadding()
+      .imePadding()
       .verticalScroll(rememberScrollState())
       .padding(horizontal = 20.dp)
-      .padding(top = 56.dp, bottom = 32.dp)
+      .padding(top = 20.dp, bottom = 32.dp)
   ) {
-    // Cabecera minimalista
-    Row(
-      modifier = Modifier.fillMaxWidth(),
-      horizontalArrangement = Arrangement.SpaceBetween,
-      verticalAlignment = Alignment.CenterVertically
-    ) {
-      Column(modifier = Modifier.weight(1f)) {
-        Text(
-          text = "Hola, $nombreMostrado",
-          fontSize = 13.sp,
-          fontWeight = FontWeight.Medium,
-          color = TextSecondary,
-          maxLines = 1,
-          overflow = TextOverflow.Ellipsis
-        )
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(
-          text = "Mi Despensa",
-          fontSize = 28.sp,
-          fontWeight = FontWeight.Bold,
-          color = TextPrimary,
-          letterSpacing = (-0.5).sp
-        )
-      }
-      Surface(
-        modifier = Modifier
-          .size(44.dp)
-          .clip(CircleShape)
-          .clickable { irPerfil() },
-        shape = CircleShape,
-        color = SurfaceCard,
-        border = BorderStroke(1.dp, BorderSubtle)
-      ) {
-        Box(contentAlignment = Alignment.Center) {
-          Text(
-            text = inicialAvatar,
-            color = TextPrimary,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold
-          )
-        }
-      }
+    CabeceraDespensa(usuario?.uid.orEmpty(), nombreMostrado, irPerfil)
+    Spacer(Modifier.height(16.dp))
+    BienvenidaDespensa(nombreMostrado, productos.size, conteoPorVencer)
+    Spacer(Modifier.height(14.dp))
+    ResumenDespensa(productos.size, conteoSeguros, conteoPorVencer, conteoVencidos, incluirTotal = false)
+    Spacer(Modifier.height(16.dp))
+    BotonNuevoProducto(agregarProducto)
+    Spacer(Modifier.height(14.dp))
+    AccesosDespensa(verRecetas, irCompras, irDesayuno)
+    if (porReponer > 0) {
+      TextButton(irCompras) { Text("$porReponer productos por reponer", color = StatusWarn) }
     }
-
-    Spacer(modifier = Modifier.height(22.dp))
-
-    // Tarjetas de estado limpias
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-      EstadisticaMiniCard(Modifier.weight(1f), "En orden", conteoSeguros.toString(), StatusSafe)
-      EstadisticaMiniCard(Modifier.weight(1f), "Por vencer", conteoPorVencer.toString(), StatusWarn)
-      EstadisticaMiniCard(Modifier.weight(1f), "Vencidos", conteoVencidos.toString(), StatusDanger)
-    }
-
-    Spacer(modifier = Modifier.height(16.dp))
-
-    // Acciones principales
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-      Button(
-        onClick = agregarProducto,
-        modifier = Modifier
-          .weight(1f)
-          .height(48.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = AccentDark, contentColor = Color.White),
-        shape = RoundedCornerShape(12.dp)
-      ) {
-        Text(text = "+ Nuevo producto", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-      }
-      OutlinedButton(
-        onClick = verRecetas,
-        modifier = Modifier
-          .weight(1f)
-          .height(48.dp),
-        shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, BorderSubtle),
-        colors = ButtonDefaults.outlinedButtonColors(
-          containerColor = SurfaceCard,
-          contentColor = AccentSage
-        )
-      ) {
-        Text(text = "Ver recetas", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-      }
-    }
-
-    Spacer(modifier = Modifier.height(10.dp))
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-      OutlinedButton(onClick = irCompras, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
-        Text("Mis compras ($porReponer)", color = TextPrimary, fontSize = 13.sp)
-      }
-      OutlinedButton(onClick = irDesayuno, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
-        Text("Mi desayuno", color = TextPrimary, fontSize = 13.sp)
-      }
-    }
-    TextButton(onClick = irRevision) {
-      Text(if (porRevisar > 0) "Revisar cantidades · $porRevisar pendientes" else "Revisar cantidades de mi despensa", color = AccentSage)
-    }
-    Spacer(modifier = Modifier.height(18.dp))
+    Spacer(Modifier.height(14.dp))
+    AccesoRevision(porRevisar, irRevision)
+    Spacer(Modifier.height(18.dp))
 
     // Encabezado de lista
     Row(
@@ -1299,11 +800,11 @@ fun PantallaPrincipal(
       verticalAlignment = Alignment.CenterVertically
     ) {
       Text(
-        text = "INVENTARIO (${productos.size})",
-        fontSize = 12.sp,
-        fontWeight = FontWeight.SemiBold,
-        color = TextSecondary,
-        letterSpacing = 0.8.sp
+        text = "Tus productos (${productos.size})",
+        fontSize = 20.sp,
+        fontWeight = FontWeight.Bold,
+        color = TextPrimary,
+        modifier = Modifier.weight(1f)
       )
       Text(
         text = if (revisandoCaducidades) "Sincronizando…" else "Verificar alertas",
@@ -1424,79 +925,7 @@ fun PantallaPrincipal(
 // TARJETA DEL PRODUCTO MINIMALISTA
 // ----------------------------------------------------
 
-@Composable
-fun TarjetaProducto(
-  producto: ProductoMapa,
-  editar: () -> Unit,
-  eliminar: () -> Unit,
-  bajoStock: Boolean,
-  consumir: () -> Unit,
-  ajustar: () -> Unit,
-  agregarCompra: () -> Unit
-) {
-  val cantidad = ControlCantidades.numero(producto["cantidad"]) ?: 0.0
-  val inicial = ControlCantidades.numero(producto["cantidadInicial"])?.takeIf { it > 0 }
-  val unidad = producto["unidad"]?.toString() ?: "pzas"
-  val fecha = producto["fechaCaducidad"]?.toString().orEmpty()
-  val estado = calcularEstadoCaducidad(fecha)
-  val color = when (estado) {
-    "Vencido" -> StatusDanger
-    "Próximo a caducar" -> StatusWarn
-    "Seguro" -> StatusSafe
-    else -> TextSecondary
-  }
-  PanelInventario {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-      Column(Modifier.weight(1f).padding(end = 12.dp)) {
-        Text(producto["nombre"]?.toString() ?: "Sin nombre", fontSize = 17.sp,
-          fontWeight = FontWeight.SemiBold, color = TextPrimary)
-        Text(listOfNotNull(producto["categoria"]?.toString(), producto["marca"]?.toString()?.takeIf { it.isNotBlank() })
-          .joinToString(" · "), fontSize = 13.sp, color = TextSecondary)
-      }
-      val fondo = when (estado) {
-        "Vencido" -> StatusDangerBg
-        "Próximo a caducar" -> StatusWarnBg
-        "Seguro" -> StatusSafeBg
-        else -> SurfaceMuted
-      }
-      Row(Modifier.clip(RoundedCornerShape(99.dp)).background(fondo).padding(horizontal = 10.dp, vertical = 5.dp),
-        verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(6.dp).clip(CircleShape).background(color))
-        Spacer(Modifier.width(6.dp))
-        Text(estado, color = color, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-      }
-    }
-    HorizontalDivider(color = SurfaceMuted)
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-      Column(Modifier.weight(1f)) {
-        Text("CANTIDAD RESTANTE", fontSize = 10.sp, color = TextSecondary)
-        Text("${ControlCantidades.texto(cantidad)} $unidad", color = TextPrimary, fontWeight = FontWeight.SemiBold)
-        if (inicial != null) Text("Inicial: ${ControlCantidades.texto(inicial)} $unidad", fontSize = 12.sp, color = TextSecondary)
-      }
-      Column(Modifier.weight(1f)) {
-        Text("VENCIMIENTO", fontSize = 10.sp, color = TextSecondary)
-        Text(fecha.ifBlank { "Pendiente" }, color = TextPrimary)
-      }
-    }
-    if (bajoStock) Text(if (cantidad == 0.0) "Agotado · considera reponerlo" else "Bajo stock · considera reponerlo",
-      color = StatusWarn, fontWeight = FontWeight.Medium)
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-      OutlinedButton(onClick = consumir, enabled = cantidad > 0.0, modifier = Modifier.weight(1f), shape = RoundedCornerShape(10.dp)) {
-        Text("Consumir", color = if (cantidad > 0) TextPrimary else TextSecondary)
-      }
-      OutlinedButton(onClick = ajustar, modifier = Modifier.weight(1f), shape = RoundedCornerShape(10.dp)) {
-        Text("Ajustar cantidad", color = TextPrimary)
-      }
-    }
-    if (bajoStock) OutlinedButton(onClick = agregarCompra, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(10.dp)) {
-      Text("Agregar a compras", color = AccentSage)
-    }
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-      TextButton(onClick = editar) { Text("Editar datos", color = TextPrimary) }
-      TextButton(onClick = eliminar) { Text("Eliminar", color = StatusDanger) }
-    }
-  }
-}
+
 
 fun calcularEstadoCaducidad(fechaCaducidad: String): String {
   if (fechaCaducidad.isBlank()) return "Caducidad pendiente"
@@ -1530,6 +959,7 @@ fun PantallaAgregarProducto(regresar: () -> Unit, productoGuardado: () -> Unit) 
 
   val selectorFecha = DatePickerDialog(
     context,
+    if (LocalApariencia.current?.oscuro == true) android.R.style.Theme_Material_Dialog else android.R.style.Theme_Material_Light_Dialog,
     { _, year, month, day ->
       val fechaSeleccionada = Calendar.getInstance()
       fechaSeleccionada.set(year, month, day)
@@ -1544,9 +974,11 @@ fun PantallaAgregarProducto(regresar: () -> Unit, productoGuardado: () -> Unit) 
     modifier = Modifier
       .fillMaxSize()
       .background(BgPrimary)
+      .safeDrawingPadding()
+      .imePadding()
       .verticalScroll(rememberScrollState())
       .padding(horizontal = 24.dp)
-      .padding(top = 56.dp, bottom = 40.dp)
+      .padding(top = 20.dp, bottom = 40.dp)
   ) {
     CabeceraNavegacion(titulo = "Nuevo producto", onRegresar = regresar)
 
@@ -1720,12 +1152,12 @@ fun PantallaAgregarProducto(regresar: () -> Unit, productoGuardado: () -> Unit) 
       enabled = !cargando,
       modifier = Modifier
         .fillMaxWidth()
-        .height(52.dp),
-      colors = ButtonDefaults.buttonColors(containerColor = AccentDark, contentColor = Color.White),
+        .heightIn(min = 52.dp),
+      colors = ButtonDefaults.buttonColors(containerColor = AccentDark, contentColor = OnAccent),
       shape = RoundedCornerShape(12.dp)
     ) {
       if (cargando) {
-        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = OnAccent, strokeWidth = 2.dp)
       } else {
         Text(text = "Guardar en inventario", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
       }
@@ -1767,6 +1199,7 @@ fun PantallaEditarProducto(
 
   val selectorFecha = DatePickerDialog(
     context,
+    if (LocalApariencia.current?.oscuro == true) android.R.style.Theme_Material_Dialog else android.R.style.Theme_Material_Light_Dialog,
     { _, year, month, day ->
       val fechaSeleccionada = Calendar.getInstance()
       fechaSeleccionada.set(year, month, day)
@@ -1781,9 +1214,11 @@ fun PantallaEditarProducto(
     modifier = Modifier
       .fillMaxSize()
       .background(BgPrimary)
+      .safeDrawingPadding()
+      .imePadding()
       .verticalScroll(rememberScrollState())
       .padding(horizontal = 24.dp)
-      .padding(top = 56.dp, bottom = 40.dp)
+      .padding(top = 20.dp, bottom = 40.dp)
   ) {
     CabeceraNavegacion(titulo = "Editar producto", onRegresar = regresar)
 
@@ -1887,12 +1322,12 @@ fun PantallaEditarProducto(
       enabled = !cargando,
       modifier = Modifier
         .fillMaxWidth()
-        .height(52.dp),
-      colors = ButtonDefaults.buttonColors(containerColor = AccentDark, contentColor = Color.White),
+        .heightIn(min = 52.dp),
+      colors = ButtonDefaults.buttonColors(containerColor = AccentDark, contentColor = OnAccent),
       shape = RoundedCornerShape(12.dp)
     ) {
       if (cargando) {
-        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = OnAccent, strokeWidth = 2.dp)
       } else {
         Text(text = "Guardar cambios", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
       }

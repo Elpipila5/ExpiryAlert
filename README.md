@@ -4,19 +4,21 @@ Aplicación para la detección de productos que ya van a expirar, ya expiraron o
 
 Permite controlar la caducidad y las cantidades de un inventario personal. El proyecto pertenece a **Desarrollo Móvil Integral**, grupo **IDGS10**, Universidad Tecnológica de Montemorelos, septiembre-noviembre de 2026.
 
-**Rama de esta integración: `v21` · Versión `1.2.0-v21`.** Conserva el perfil y el diseño minimalista, incorpora el motor local de 28 recetas de main y añade consumo, correcciones de cantidad, revisión periódica, bajo stock, lista de compras y recordatorio de desayuno.
+**Versión `1.3.0` · rama `main`.** Nuevo diseño verde y menta, botón de producto a ancho completo, resumen adaptable, modo oscuro y foto de perfil personalizable. Conserva recetas, consumo, ajustes de cantidad, bajo stock, compras y desayuno.
+
+El botón de luna/sol cambia toda la aplicación y recuerda la elección en este dispositivo. En **Mi perfil** puedes agregar, cambiar o quitar una foto y editar tu nombre. Las fotos se guardan por cuenta en el dispositivo; no se sincronizan con Firebase ni entre teléfonos.
 
 ## Funciones de los sprints 6 a 8
 
 - **Mi despensa:** registrar consumo con conversiones kg/g y L/ml, ajustar cantidades y revisar saldos periódicamente.
 - **Mis compras:** agregar productos manualmente, desde bajo stock o desde los ingredientes faltantes de una receta; editar y marcar compras.
 - **Mi desayuno:** registrar los productos consumidos y configurar un recordatorio aproximado.
-- **Perfil → Inventario y horario de desayuno:** cambiar porcentaje de bajo stock, intervalo de revisión y hora de desayuno.
+- **Perfil → Inventario y recordatorios:** cambiar porcentaje de bajo stock, intervalo de revisión y hora de desayuno.
 - **Recetas:** completas, parciales e ideas sin inventario; priorizar ingredientes próximos a caducar, mostrar pasos y buscar preparación en YouTube.
 
 Productos y cantidades se mantienen en Firebase. Compras y preferencias se conservan por cuenta en el dispositivo. El recordatorio de desayuno funciona con WorkManager y puede retrasarse por las restricciones de batería de Android.
 
-Se ejecutaron **62 pruebas unitarias** sobre el código Kotlin de producción. Las pruebas en teléfono, persistencia Android, permisos y regresión deben completarse antes de declarar la entrega final. Consulta [la implementación, los resultados y la matriz de aceptación de v21](docs/pruebas/v21-sprints6-9.md).
+La suite incluye **72 pruebas**: 62 de la lógica existente y 10 de diseño y personalización. Las nuevas verifican etiquetas completas a 320 dp, fuentes grandes, cambio real de colores, persistencia del tema, fotos separadas por cuenta y copias independientes de la galería. Consulta [los cambios y la validación de 1.3.0](docs/pruebas/diseno-personalizacion.md) y [la matriz funcional de los sprints 6 a 9](docs/pruebas/v21-sprints6-9.md). La aceptación en el teléfono sigue pendiente.
 
 - [Pruebas F10 del Sprint 7](docs/pruebas/sprint7-recetas.md)
 - [Backend IA anterior, opcional y no conectado a esta interfaz](backend/README.md)

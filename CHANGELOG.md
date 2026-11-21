@@ -1,5 +1,16 @@
 # Registro de cambios
 
+## 2026-11-20 - 1.3.0
+
+- Diseño verde y menta con nueva bienvenida, iconos y tarjetas de producto.
+- Botón «Nuevo producto» a ancho completo y con altura adaptable al texto.
+- Resumen en dos columnas en el perfil; se reorganiza según ancho y tamaño de letra.
+- Modo claro/oscuro para todas las pantallas, persistente en este dispositivo.
+- Selección, cambio y eliminación de foto de perfil, con archivos separados por cuenta.
+- Colores de formularios, diálogos y selectores de fecha/hora adaptados al tema.
+- Diez pruebas nuevas de diseño y personalización, compartidas entre Robolectric y Android.
+- Validación y pasos para el teléfono en `docs/pruebas/diseno-personalizacion.md`.
+
 ## 2026-11-19 - 1.2.0-v21
 
 - Recetas de main integradas al diseño de v21 y a la lista de compras.
