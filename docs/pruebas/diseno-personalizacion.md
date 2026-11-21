@@ -48,6 +48,14 @@ Estos resultados corresponden a un emulador temporal y no acreditan la aceptaci�
 
 ## Comprobar en el teléfono
 
+### Actualización que no se refleja — 21/11/2026
+
+Tras el reporte del usuario de que no veía ningún cambio, se comprobó que `v21` seguía en el commit `566cb8e`, mientras `main` ya contenía el rediseño. Se adelantó `v21` sin reescribir su historia y se publican los cambios de actualización en ambas ramas. Esa diferencia era real; no confirma por sí sola qué carpeta, rama o APK estaba ejecutando el teléfono del usuario.
+
+La [ejecución adicional](https://github.com/Elpipila5/ExpiryAlert/actions/runs/44942313163) sobre `e2a3545254644c084035a4d0a47013e7cf51a42f` aprobó **19 pruebas Android y las 72 locales**. `EntradaAppInstrumentedTest` arranca la `MainActivity` declarada en el manifiesto, sin inyectar el tema ni las pantallas, comprueba que el control sea visible y cambia el tema. El informe contiene capturas de esa entrada real. Windows CI también comprobó la sintaxis y ejecutó el diagnóstico del actualizador; la instalación por USB en el equipo del usuario no se ha ejecutado desde CI.
+
+`Actualizar-ExpiryAlert.cmd` comprueba carpeta, commit, APK generado, dispositivo y versión instalada, y abre la actividad de entrada. Se detiene sin descartar cambios locales ni desinstalar la app. Las [instrucciones](../instalacion.md#si-la-pantalla-sigue-mostrando-una-versión-anterior) permiten comprobar la instalación real antes de dar por resuelto el reporte del teléfono.
+
 | Caso | Resultado esperado |
 | --- | --- |
 | Abrir la despensa y el perfil | Botón completo; etiquetas de resumen legibles sin puntos suspensivos. |

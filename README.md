@@ -18,7 +18,9 @@ El botón de luna/sol cambia toda la aplicación y recuerda la elección en este
 
 Productos y cantidades se mantienen en Firebase. Compras y preferencias se conservan por cuenta en el dispositivo. El recordatorio de desayuno funciona con WorkManager y puede retrasarse por las restricciones de batería de Android.
 
-Android CI compiló la aplicación y aprobó **72 pruebas locales y 18 pruebas instrumentadas en Android 15**, sin fallos. Cubren lógica, etiquetas completas a 320 dp, fuentes grandes, cambio real de colores, persistencia del tema, fotos separadas por cuenta, URI de contenido y compras. Consulta [los resultados de 1.3.0](docs/pruebas/diseno-personalizacion.md), [la matriz funcional](docs/pruebas/v21-sprints6-9.md) y [los pendientes de cierre del Sprint 9](docs/pruebas/cierre-sprint9.md). La aceptación en el teléfono y las reglas publicadas de Firebase siguen pendientes.
+Android CI compiló la aplicación y aprobó **72 pruebas locales y 19 pruebas instrumentadas en Android 15**, sin fallos. Incluyen el arranque de `MainActivity` con el control de tema, etiquetas completas a 320 dp, fuentes grandes, fotos y compras por cuenta. Consulta [los resultados de 1.3.0](docs/pruebas/diseno-personalizacion.md), [la matriz funcional](docs/pruebas/v21-sprints6-9.md) y [los pendientes de cierre](docs/pruebas/cierre-sprint9.md). La aceptación en el teléfono y las reglas publicadas de Firebase siguen pendientes.
+
+**Si sigues viendo el diseño anterior en Windows:** desde la terminal de este proyecto abierto en Android Studio, ejecuta `git pull --ff-only` y después `.\Actualizar-ExpiryAlert.cmd`. El [actualizador](docs/instalacion.md#si-la-pantalla-sigue-mostrando-una-versión-anterior) actualiza main, compila, instala conservando datos y verifica la versión realmente instalada.
 
 - [Pruebas F10 del Sprint 7](docs/pruebas/sprint7-recetas.md)
 - [Backend IA anterior, opcional y no conectado a esta interfaz](backend/README.md)

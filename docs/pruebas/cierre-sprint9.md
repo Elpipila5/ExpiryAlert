@@ -8,6 +8,7 @@ Estado al 21/11/2026: **versión candidata 1.3.0, versionCode 6**. La preparaci�
 - La [validación automatizada](https://github.com/Elpipila5/ExpiryAlert/actions/runs/44928823005) del código `6a5a97045e465a94c9f41a00e663606bc2bb59ba` aprobó las **72 pruebas locales y las 18 pruebas instrumentadas en Android 15 (API 35)**, sin fallos, errores ni casos omitidos. También generó ambos APK y terminó lint sin errores.
 - Las pruebas Android cubren los 10 casos compartidos de diseño/fotos, cuatro de compras y preferencias por cuenta, dos de avisos atendidos, una foto desde una URI de contenido y una comprobación del contexto de la app. Los informes incluyen **11 capturas nativas**, además de las capturas locales.
 - La foto desde `content://` se decodificó y guardó correctamente en API 35, incluso tras eliminar el original. Esto comprueba el protocolo y el guardado, pero no automatiza la elección en la interfaz del selector del sistema.
+- La [validación posterior de la entrada real y del actualizador Windows](https://github.com/Elpipila5/ExpiryAlert/actions/runs/44942313163) amplió la suite Android a **19 casos aprobados**, junto a las 72 pruebas locales. La prueba nueva arranca `MainActivity` y comprueba el control de tema. El diagnóstico de Windows terminó correctamente; la instalación USB del usuario y su resultado visual siguen pendientes de confirmar.
 - Las comprobaciones funcionales de autenticación, CRUD, OCR, códigos y respuestas a avisos fueron informadas por el usuario en una versión anterior. Su registro histórico está en [Sprint 5](sprint5-integracion.md); la regresión completa de 1.3.0 continúa pendiente en el teléfono.
 
 ## Estado de las funciones del plan
@@ -24,7 +25,7 @@ Estado al 21/11/2026: **versión candidata 1.3.0, versionCode 6**. La preparaci�
 | F08 Bajo stock y compras | Umbral configurable, reposición, lista y marcado de compras. | Lógica automatizada; casos de compras y separación por cuenta aprobados en Android 15. |
 | F09 Desayuno | Horario configurable y registro explícito de productos consumidos. | Cálculo de horario y persistencia; la llegada aproximada del recordatorio requiere prueba real. |
 | F10 Recetas | 28 recetas locales, faltantes, compras, pasos y YouTube. | Motor automatizado; demostrar sin inventario, solo tortillas y tortillas con queso. |
-| PB11 Calidad | Compilación, 72 casos locales, 18 casos Android y lint aprobados en CI. | Pendientes reglas publicadas, aceptación, evidencias finales y firma de distribución del equipo. |
+| PB11 Calidad | Compilación, 72 casos locales, 19 casos Android, lint y diagnóstico Windows aprobados en CI. | Pendientes instalación/aceptación en teléfono, reglas publicadas y firma de distribución del equipo. |
 
 Las fotos de perfil, compras y preferencias se conservan por cuenta **en este dispositivo**. No se sincronizan entre teléfonos. El tema es una preferencia del dispositivo. La cantidad restante se estima a partir de consumos y ajustes; una foto no la mide.
 
