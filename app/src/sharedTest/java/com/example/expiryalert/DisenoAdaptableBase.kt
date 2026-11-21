@@ -88,12 +88,12 @@ abstract class DisenoAdaptableBase {
         return bitmap
     }
 
-    private fun guardarCaptura(nombre: String) {
+    private fun guardarCaptura(nombre: String, etiqueta: String = "captura") {
         val carpeta = (System.getProperty("expiry.qa.dir")?.let { File(it) }
             ?: InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
                 ?.takeIf { it.isNotBlank() }?.let { File(it) }
             ?: File(contexto.getExternalFilesDir(null), "qa_diseno")).apply { mkdirs() }
-        val bitmap = capturarVista()
+        val bitmap = capturarVista(etiqueta)
         File(carpeta, "$nombre.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
         bitmap.recycle()
     }
@@ -137,12 +137,13 @@ abstract class DisenoAdaptableBase {
         }
         val claro = luminosidad()
         assertTrue("Luminosidad del fondo claro: $claro", claro > 0.8f)
-        guardarCaptura("cambio_tema_antes")
+        guardarCaptura("cambio_tema_antes", "tema")
         compose.onNodeWithContentDescription("Activar modo oscuro").performClick()
         compose.onNodeWithContentDescription("Activar modo claro").assertIsDisplayed()
         // Semántica y composición pueden adelantarse un fotograma a PixelCopy.
-        compose.waitUntil(timeoutMillis = 5_000) { luminosidad() < 0.1f }
-        guardarCaptura("cambio_tema_despues")
+        try {
+            compose.waitUntil(timeoutMillis = 5_000) { luminosidad() < 0.1f }
+        } finally { guardarCaptura("cambio_tema_despues", "tema") }
         val oscuro = luminosidad()
         assertTrue("Luminosidad del fondo oscuro: $oscuro", oscuro < 0.1f)
         assertTrue(ControlApariencia(contexto, false, preferencias).oscuro)
