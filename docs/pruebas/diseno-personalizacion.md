@@ -30,8 +30,8 @@ Las comprobaciones de texto miden el ancho de cada línea dibujada y rechazan el
 Comandos:
 
 ```powershell
-.\\gradlew.bat :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug
-.\\gradlew.bat :app:connectedDebugAndroidTest
+.\gradlew.bat :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug
+.\gradlew.bat :app:connectedDebugAndroidTest
 ```
 
 Las capturas locales se generan en `app/build/reports/diseno`. CI usa JDK 25 para Gradle y JDK 21 para las pruebas. Robolectric usa API 27 con gráficos nativos. Las pruebas instrumentadas comparten los casos de prueba y usan la API del dispositivo; se compilaron, pero su ejecución sigue pendiente.
