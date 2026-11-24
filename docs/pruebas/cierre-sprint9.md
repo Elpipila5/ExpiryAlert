@@ -1,39 +1,27 @@
-# Versión candidata y cierre del Sprint 9
+# Cierre técnico del Sprint 9
 
-Estado al 21/11/2026: **versión candidata 1.3.0, versionCode 6**. La preparación técnica no sustituye la aceptación del equipo ni la prueba en el teléfono. El Sprint 9 del plan abarca del 23 al 27 de noviembre, con presentación el 24 y 25.
+Estado al 24/11/2026: versión 1.4.0, código 7. La presentación del plan está prevista para el 24 y 25; el 26 y 27 se reservan a cierre y retroalimentación.
 
-## Evidencia disponible
+## Trabajo concluido y preparado
 
-- El [rediseño integrado](https://github.com/Elpipila5/ExpiryAlert/pull/24) conserva las funciones de inventario, recetas, consumo, reposición y desayuno.
-- La [validación automatizada](https://github.com/Elpipila5/ExpiryAlert/actions/runs/44928823005) del código `6a5a97045e465a94c9f41a00e663606bc2bb59ba` aprobó las **72 pruebas locales y las 18 pruebas instrumentadas en Android 15 (API 35)**, sin fallos, errores ni casos omitidos. También generó ambos APK y terminó lint sin errores.
-- Las pruebas Android cubren los 10 casos compartidos de diseño/fotos, cuatro de compras y preferencias por cuenta, dos de avisos atendidos, una foto desde una URI de contenido y una comprobación del contexto de la app. Los informes incluyen **11 capturas nativas**, además de las capturas locales.
-- La foto desde `content://` se decodificó y guardó correctamente en API 35, incluso tras eliminar el original. Esto comprueba el protocolo y el guardado, pero no automatiza la elección en la interfaz del selector del sistema.
-- La [validación posterior de la entrada real y del actualizador Windows](https://github.com/Elpipila5/ExpiryAlert/actions/runs/44942313163) amplió la suite Android a **19 casos aprobados**, junto a las 72 pruebas locales. La prueba nueva arranca `MainActivity` y comprueba el control de tema. El diagnóstico de Windows terminó correctamente; la instalación USB del usuario y su resultado visual siguen pendientes de confirmar.
-- Las comprobaciones funcionales de autenticación, CRUD, OCR, códigos y respuestas a avisos fueron informadas por el usuario en una versión anterior. Su registro histórico está en [Sprint 5](sprint5-integracion.md); la regresión completa de 1.3.0 continúa pendiente en el teléfono.
+- F01–F10 integradas en la base 1.3.0. José Enrique informó que el equipo de tres integrantes revisó la última versión y que los problemas visuales y de actualización quedaron resueltos.
+- F02 ampliada con foto del producto persistida dentro de su documento. Importación desde galería/enlace, sugerencias por código o nombre/marca, búsqueda Google y confirmación de vista previa.
+- Reglas ampliadas para fotos, compatibles con productos antiguos y probadas con dos cuentas/cliente anónimo. Suite de 14 casos en emulador, aprobada el 24/11.
+- Pruebas compartidas de fotografía y editor para API 27 local y Android 15. Incluyen conservación tras borrar el archivo de origen y restauración de estado.
+- Modelo de datos y arquitectura actualizados al código implementado.
+- Manual, reporte técnico y guion de demostración en [entrega](../entrega/LEEME.md).
+- Paquete reproducible con APK, fuente, hashes y resultados locales. Artefactos de CI con conservación de 90 días.
 
-## Estado de las funciones del plan
+## Evidencia histórica y nueva
 
-| Función | Implementación actual | Verificación y límite |
-| --- | --- | --- |
-| F01 Cuenta y sesión | Firebase Auth, registro, ingreso y cierre de sesión. | Funcionamiento informado en versión anterior; volver a probar la sesión en 1.3.0. |
-| F02 Registro de productos | Alta, edición, eliminación, cantidad inicial y unidad. | Compilación y validaciones; pendiente de regresión con Firestore real. |
-| F03 Fotografía y OCR | Lectura de fecha/cantidad con confirmación y corrección. | Lógica automatizada; luz, cámara y empaques requieren teléfono. |
-| F04 Inventario y estado | Inventario por usuario, clasificación y saldos. | Pruebas de fechas y visibilidad; resumen adaptable. |
-| F05 Caducidad | Avisos, confirmación y archivo; estado atendido persistente. | Dos casos de estado atendido aprobados en Android 15; la entrega con app cerrada requiere comprobar WorkManager y permisos. |
-| F06 Consumo | Transacciones, saldo restante y conversiones kg/g y L/ml. | Cálculos y límites automatizados; falta comprobar concurrencia y permisos con dos clientes reales. |
-| F07 Verificación y ajuste | Revisión periódica configurable, confirmación y corrección de saldo. | Lógica automatizada; falta demostración completa con Firestore y avisos. |
-| F08 Bajo stock y compras | Umbral configurable, reposición, lista y marcado de compras. | Lógica automatizada; casos de compras y separación por cuenta aprobados en Android 15. |
-| F09 Desayuno | Horario configurable y registro explícito de productos consumidos. | Cálculo de horario y persistencia; la llegada aproximada del recordatorio requiere prueba real. |
-| F10 Recetas | 28 recetas locales, faltantes, compras, pasos y YouTube. | Motor automatizado; demostrar sin inventario, solo tortillas y tortillas con queso. |
-| PB11 Calidad | Compilación, 72 casos locales, 19 casos Android, lint y diagnóstico Windows aprobados en CI. | Pendientes instalación/aceptación en teléfono, reglas publicadas y firma de distribución del equipo. |
+La base 8ddcf02 aprobó [72 pruebas locales y 19 Android](https://github.com/Elpipila5/ExpiryAlert/actions/runs/44942875087), lint y diagnóstico Windows. El workflow de 1.4.0 vuelve a compilar y ampliar las suites; su resultado real y metadatos identifican el APK final. No se declara aprobada una ejecución nueva antes de que termine.
 
-Las fotos de perfil, compras y preferencias se conservan por cuenta **en este dispositivo**. No se sincronizan entre teléfonos. El tema es una preferencia del dispositivo. La cantidad restante se estima a partir de consumos y ajustes; una foto no la mide.
+Las fotos de perfil, compras y preferencias son locales por cuenta. La foto del producto viaja con Firestore. Los recordatorios WorkManager son aproximados; una prueba de emulador no acredita entrega bajo ahorro de batería en el Xiaomi.
 
-## Pendientes para declarar la entrega final
+## Acciones que requieren el servicio o al equipo
 
-1. **Teléfono:** actualizar desde main, verificar versión 1.3.0 y completar las matrices de [cantidades y recetas](v21-sprints6-9.md) y [personalización](diseno-personalizacion.md). Incluir selección, cambio y eliminación de foto, cancelación del selector, reinicio, rotación y cambio de cuenta.
-2. **Firebase:** comprobar las reglas realmente publicadas, compatibilidad de campos y acceso del propietario frente a otra cuenta. Seguir [seguridad](../seguridad-firestore.md). No está confirmado desde este repositorio.
-3. **Recordatorios:** comprobar caducidad, bajo stock, revisión y desayuno con permisos concedidos/denegados y ahorro de batería. WorkManager puede retrasar las entregas.
-4. **Distribución y evidencias:** generar APK/AAB con la clave del equipo, registrar commit, teléfono y Android utilizados, capturas o video y revisión del otro integrante. No se ha creado ni publicado una clave privada de distribución.
+1. **Publicar las reglas ampliadas** en Firebase `expiryalert-e9b37`, conservando las reglas de otras colecciones si existen. [Pasos concretos](../entrega/LEEME.md#activar-el-guardado-de-fotos-en-firebase). No hay sesión administrativa disponible aquí para hacerlo o demostrarlo.
+2. Instalar 1.4.0 conservando datos y comprobar en el teléfono el nuevo guardado/cambio/eliminación de la foto. La confirmación del equipo recibida corresponde a la versión anterior.
+3. Conservar el paquete/artefactos y registrar la demostración final. Documentar los casos específicos de recordatorios y las aportaciones individuales que el equipo vaya a presentar.
 
-La [instalación actual](../instalacion.md) explica cómo actualizar conservando los datos locales. Las pruebas en emulador y CI se registran como tales; no acreditan pruebas físicas ni cambios publicados en Firebase.
+El estado del tablero debe reflejar criterios satisfechos y límites pendientes, sin atribuir contribuciones ni aprobaciones de GitHub no comunicadas.

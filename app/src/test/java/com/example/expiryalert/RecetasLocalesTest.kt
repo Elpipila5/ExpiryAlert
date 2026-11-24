@@ -136,4 +136,22 @@ class RecetasLocalesTest {
         assertTrue(resultado.requierenCompras.isEmpty())
         assertTrue(resultado.otrasIdeas.size >= 10)
     }
+
+    @Test fun cosmeticosYLimpiezaNoSeUsanComoIngredientesAunqueCoincidaElNombre() {
+        val resultado = RecetasLocales.analizar(listOf(
+            producto("Crema") + ("categoria" to "Cosméticos"),
+            producto("Limón") + ("categoria" to "Productos de limpieza"),
+            producto("Pasta dental"), producto("Aceite para motor"), producto("Leche corporal")
+        ), hoy)
+        assertEquals(0, resultado.productosAptos)
+        assertTrue(resultado.preparables.isEmpty())
+    }
+
+    @Test fun categoriasAlimentariasConservanLosIngredientesCompatibles() {
+        val resultado = RecetasLocales.analizar(listOf(
+            producto("Queso") + ("categoria" to "Lácteos"),
+            producto("Tortillas") + ("categoria" to "Cereales")
+        ), hoy)
+        assertTrue(resultado.preparables.any { it.nombre == "Quesadillas de queso" })
+    }
 }

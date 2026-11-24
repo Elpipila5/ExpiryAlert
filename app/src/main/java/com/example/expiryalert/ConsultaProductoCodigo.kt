@@ -13,7 +13,8 @@ data class ProductoEncontrado(
     val marca: String,
     val categoria: String,
     val cantidad: String,
-    val unidad: String
+    val unidad: String,
+    val urlFoto: String = ""
 )
 
 /**
@@ -48,7 +49,7 @@ object ConsultaProductoCodigo {
         // Las consultas tienen límites: solo al escanear o presionar "Buscar".
         val url = URL(
             "https://world.openfoodfacts.org/api/v2/product/$codigo.json" +
-                "?fields=code,product_name,product_name_es,brands,quantity,categories"
+                "?fields=code,product_name,product_name_es,brands,quantity,categories,selected_images,image_front_url"
         )
         val conexion = (url.openConnection() as HttpURLConnection).apply {
             requestMethod = "GET"
@@ -88,7 +89,8 @@ object ConsultaProductoCodigo {
                 marca = marca,
                 categoria = categoria,
                 cantidad = cantidad?.first.orEmpty(),
-                unidad = cantidad?.second.orEmpty()
+                unidad = cantidad?.second.orEmpty(),
+                urlFoto = ConsultaFotoProducto.extraerUrl(producto)
             )
         } finally {
             conexion.disconnect()

@@ -164,6 +164,9 @@ object RecetasLocales {
     private fun aptos(productos: List<Map<String, Any>>, hoy: Calendar): List<Producto> =
         productos.mapNotNull { dato ->
             if (dato["activo"] == false) return@mapNotNull null
+            val categoria = normalizar(dato["categoria"]?.toString().orEmpty())
+            val noAlimentarias = setOf("cosmeticos", "cosmetica", "limpieza", "higiene", "medicamentos", "mascotas", "automotriz")
+            if (categoria.split(' ').any { it in noAlimentarias }) return@mapNotNull null
 
             val cantidad = when (val valor = dato["cantidad"]) {
                 is Number -> valor.toDouble()
@@ -174,6 +177,8 @@ object RecetasLocales {
 
             val nombre = dato["nombre"]?.toString()?.trim().orEmpty()
             if (nombre.isBlank()) return@mapNotNull null
+            val palabrasNombre = normalizar(nombre).split(' ')
+            if (palabrasNombre.any { it in setOf("dental", "corporal", "facial", "motor", "detergente", "shampoo", "champu") }) return@mapNotNull null
 
             val fecha = dato["fechaCaducidad"]?.toString()?.trim().orEmpty()
             val dias = if (fecha.isBlank()) {

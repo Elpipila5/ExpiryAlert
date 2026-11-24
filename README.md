@@ -4,9 +4,9 @@ Aplicación para la detección de productos que ya van a expirar, ya expiraron o
 
 Permite controlar la caducidad y las cantidades de un inventario personal. El proyecto pertenece a **Desarrollo Móvil Integral**, grupo **IDGS10**, Universidad Tecnológica de Montemorelos, septiembre-noviembre de 2026.
 
-**Versión `1.3.0` · rama `main`.** Nuevo diseño verde y menta, botón de producto a ancho completo, resumen adaptable, modo oscuro y foto de perfil personalizable. Conserva recetas, consumo, ajustes de cantidad, bajo stock, compras y desayuno.
+**Versión `1.4.0` · rama `main`.** Añade fotografía persistente por producto, sugerencias por nombre/marca o código, búsqueda en Google Imágenes, importación desde galería/enlace y cambio/eliminación. Conserva el diseño verde y menta, modo oscuro, perfil, recetas, consumo, ajustes, bajo stock, compras y desayuno.
 
-El botón de luna/sol cambia toda la aplicación y recuerda la elección en este dispositivo. En **Mi perfil** puedes agregar, cambiar o quitar una foto y editar tu nombre. Las fotos se guardan por cuenta en el dispositivo; no se sincronizan con Firebase ni entre teléfonos.
+El botón de luna/sol cambia toda la aplicación y recuerda la elección en este dispositivo. En **Mi perfil** puedes agregar, cambiar o quitar una foto y editar tu nombre. La foto de perfil es local por cuenta; la foto del producto se guarda con el documento en Firestore. Antes de usar este último campo, [publicar las reglas ampliadas](docs/entrega/LEEME.md#activar-el-guardado-de-fotos-en-firebase).
 
 ## Funciones de los sprints 6 a 8
 
@@ -18,7 +18,9 @@ El botón de luna/sol cambia toda la aplicación y recuerda la elección en este
 
 Productos y cantidades se mantienen en Firebase. Compras y preferencias se conservan por cuenta en el dispositivo. El recordatorio de desayuno funciona con WorkManager y puede retrasarse por las restricciones de batería de Android.
 
-Android CI compiló la aplicación y aprobó **72 pruebas locales y 19 pruebas instrumentadas en Android 15**, sin fallos. Incluyen el arranque de `MainActivity` con el control de tema, etiquetas completas a 320 dp, fuentes grandes, fotos y compras por cuenta. Consulta [los resultados de 1.3.0](docs/pruebas/diseno-personalizacion.md), [la matriz funcional](docs/pruebas/v21-sprints6-9.md) y [los pendientes de cierre](docs/pruebas/cierre-sprint9.md). La aceptación en el teléfono y las reglas publicadas de Firebase siguen pendientes.
+La base 1.3.0 aprobó 72 pruebas locales y 19 en Android 15. La versión 1.4.0 amplía pruebas de fotos y añade una suite de reglas con dos cuentas. Consultar el resultado del workflow correspondiente al commit instalado y el [reporte técnico](docs/entrega/reporte-tecnico.md). José Enrique informó que los tres integrantes revisaron la base anterior; el nuevo guardado de fotos y la publicación de reglas reales requieren su comprobación final.
+
+El paquete **ExpiryAlert-entrega** de Android CI reúne APK, código, manuales, metadatos e informes locales. [Material de entrega y demostración](docs/entrega/LEEME.md).
 
 **Si sigues viendo el diseño anterior en Windows:** desde la terminal de este proyecto abierto en Android Studio, ejecuta `git pull --ff-only` y después `.\Actualizar-ExpiryAlert.cmd`. El [actualizador](docs/instalacion.md#si-la-pantalla-sigue-mostrando-una-versión-anterior) actualiza main, compila, instala conservando datos y verifica la versión realmente instalada.
 

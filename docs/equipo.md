@@ -10,6 +10,12 @@
 
 No se infiere la identidad de GitHub de una persona a partir del propietario del repositorio. La Actividad 1 utiliza variantes como «Alcoser» y el plan utiliza «Alcocer». Confirmar nombres oficiales y asignaciones en DEC01; la tabla conserva el plan con capitalización normalizada.
 
+## Revisión comunicada el 24 de noviembre de 2026
+
+José Enrique confirmó que él es la persona que solicita los cambios y que revisó la última versión junto a Martin Abelardo y Carlos Emanuel. Se registra como revisión funcional conjunta de la base 1.3.0, después de resolver los problemas de actualización, tema y fotografía de perfil.
+
+Esta es evidencia declarada por el equipo, no una aprobación formal emitida mediante GitHub Reviews. Las fotos de producto de 1.4.0 son posteriores y tienen resultados de prueba propios. No se atribuyen commits ni funcionalidades a una persona sin una relación confirmada entre nombre, cuenta y trabajo realizado.
+
 ## Responsabilidades primarias y rotativas
 
 | Responsabilidad | Trabajo |

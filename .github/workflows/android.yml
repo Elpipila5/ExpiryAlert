@@ -13,6 +13,10 @@ on:
       - '.github/scripts/pruebas-android.sh'
       - 'scripts/**'
       - 'Actualizar-ExpiryAlert.cmd'
+      - 'firestore.rules'
+      - 'firebase.json'
+      - 'seguridad/**'
+      - 'docs/entrega/**'
   pull_request:
     branches: [main]
     paths:
@@ -25,6 +29,10 @@ on:
       - '.github/scripts/pruebas-android.sh'
       - 'scripts/**'
       - 'Actualizar-ExpiryAlert.cmd'
+      - 'firestore.rules'
+      - 'firebase.json'
+      - 'seguridad/**'
+      - 'docs/entrega/**'
   workflow_dispatch:
 
 permissions:
@@ -88,13 +96,56 @@ jobs:
           path: |
             app/build/reports/
             app/build/test-results/
-          retention-days: 7
+          retention-days: 90
       - name: Guardar APK de prueba
         uses: actions/upload-artifact@v7
         with:
           name: ExpiryAlert-debug
           path: app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 7
+          retention-days: 90
+      - name: Preparar paquete de entrega con APK y código
+        env:
+          EXPIRY_COMMIT_FUENTE: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: python3 scripts/preparar-entrega.py
+      - name: Guardar paquete de entrega
+        uses: actions/upload-artifact@v7
+        with:
+          name: ExpiryAlert-entrega
+          path: build/entrega/
+          retention-days: 90
+
+  seguridad:
+    name: Reglas Firestore con dos cuentas
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: seguridad/package-lock.json
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Instalar herramientas de prueba
+        working-directory: seguridad
+        run: npm ci --no-audit --no-fund
+      - name: Comprobar permisos y fotos en el emulador
+        working-directory: seguridad
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee resultado-seguridad.txt
+      - name: Guardar resultado de seguridad
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: pruebas-reglas-firestore
+          path: |
+            seguridad/resultado-seguridad.txt
+            seguridad/firestore-debug.log
+          retention-days: 90
 
   android:
     name: Pruebas en Android 15
@@ -138,4 +189,4 @@ jobs:
             app/build/outputs/androidTest-results/
             app/build/outputs/connected_android_test_additional_output/
             app/build/reports/diseno-android/
-          retention-days: 7
+          retention-days: 90
