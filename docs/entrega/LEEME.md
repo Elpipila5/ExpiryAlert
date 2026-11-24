@@ -40,6 +40,7 @@ El entorno de desarrollo de esta entrega no dispone de una sesión administrativ
 
 - [Manual de usuario](manual-usuario.md)
 - [Reporte técnico y resultados](reporte-tecnico.md)
+- [Presentación editable](Presentacion_ExpiryAlert.pptx)
 - [Guion de demostración](presentacion.md)
 - [Cierre del Sprint 9](../pruebas/cierre-sprint9.md)
 - [Modelo implementado](../modelo-datos.md)

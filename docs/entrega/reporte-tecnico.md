@@ -26,6 +26,8 @@ Se filtran categorías no alimentarias reconocidas y términos como pasta dental
 
 La agrupación sigue los objetivos del plan; no afirma que todas las tareas se integraron dentro de su semana prevista.
 
+José Enrique precisó que él y Martin realizaron programación y Carlos elaboró los documentos. Se registra esta distribución sin atribuir módulos o cuentas individuales no confirmados.
+
 ## Pruebas y reproducción
 
 La base 1.3.0 aprobó 72 casos locales y 19 Android 15 en el commit 8ddcf02. El usuario comunicó que los problemas visuales y de actualización quedaron resueltos y que los tres integrantes revisaron esa versión.
@@ -40,7 +42,7 @@ npm ci --no-audit --no-fund
 npm test
 ```
 
-Requiere Node 22 o superior y Java 21. Android CI también ejecuta las reglas y conserva su salida. El resultado definitivo de la versión es el workflow del commit entregado, no un conteo anticipado. `VERSION_Y_PRUEBAS.json` del paquete contiene el total local real. Los informes Android y de seguridad se adjuntan como artefactos separados.
+Requiere Node 22 o superior y Java 21. Android CI también ejecuta las reglas y conserva su salida. La primera ejecución completa de 1.4.0, sobre 30dee32, aprobó 85 pruebas locales y 26 Android 15, además de las 14 de reglas, lint y diagnóstico Windows: https://github.com/Elpipila5/ExpiryAlert/actions/runs/45472834654 . La suite se amplía después con captura de tarjeta/editor y validación de metadatos del APK. El resultado definitivo es el workflow del commit entregado, no un conteo anticipado. `VERSION_Y_PRUEBAS.json` del paquete contiene el total local real. Los informes Android y de seguridad se adjuntan como artefactos separados.
 
 ```bash
 bash gradlew :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug

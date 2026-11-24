@@ -20,6 +20,13 @@ def preparar():
     apk = RAIZ / 'app/build/outputs/apk/debug/app-debug.apk'
     if not apk.is_file():
         raise SystemExit('Primero ejecuta :app:assembleDebug y :app:testDebugUnitTest.')
+    datos_apk = apk.parent / 'output-metadata.json'
+    if not datos_apk.is_file():
+        raise SystemExit('Faltan los metadatos generados por Android Gradle Plugin para este APK.')
+    elementos = json.loads(datos_apk.read_text()).get('elements', [])
+    if not any(e.get('versionName') == version and int(e.get('versionCode', -1)) == codigo and
+               e.get('outputFile') == apk.name for e in elementos):
+        raise SystemExit('El APK no corresponde a la versión del código. Vuelve a compilar.')
     informes = list((RAIZ / 'app/build/test-results/testDebugUnitTest').glob('TEST-*.xml'))
     if not informes:
         raise SystemExit('No hay resultados de pruebas locales para adjuntar.')
