@@ -119,6 +119,11 @@ abstract class DisenoAdaptableBase {
         textoCompleto("Leche entera")
         textoCompleto("Consumir")
         textoCompleto("Ajustar cantidad")
+        textoCompleto("25/11/2026")
+        val fecha = mutableListOf<TextLayoutResult>()
+        compose.onNodeWithText("25/11/2026", useUnmergedTree = true)
+            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(fecha) }
+        assertTrue("La fecha debe verse completa en una línea", fecha.all { it.lineCount == 1 })
         compose.onNodeWithText("Leche entera").performScrollTo()
         compose.waitUntil(10000) { compose.onAllNodesWithContentDescription("Foto de Leche entera").fetchSemanticsNodes().isNotEmpty() }
         guardarCaptura("producto_foto_oscuro_fuente_grande")

@@ -266,17 +266,29 @@ fun TarjetaProducto(
             }
         }
         Surface(shape = RoundedCornerShape(16.dp), color = SurfaceMuted) {
-            Row(Modifier.fillMaxWidth().padding(14.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            BoxWithConstraints(Modifier.fillMaxWidth().padding(14.dp)) {
+                val saldo: @Composable () -> Unit = {
+                    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     Text("Te queda", fontSize = 12.sp, color = TextSecondary)
                     Text("${ControlCantidades.texto(cantidad)} $unidad", color = TextPrimary,
                         fontSize = 18.sp, lineHeight = 23.sp, fontWeight = FontWeight.SemiBold)
                     if (inicial != null) Text("De ${ControlCantidades.texto(inicial)} $unidad", fontSize = 11.sp, color = TextSecondary)
+                    }
                 }
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                val caducidad: @Composable () -> Unit = {
+                    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     Text("Caducidad", fontSize = 12.sp, color = TextSecondary)
                     Text(fecha.ifBlank { "Por confirmar" }, color = TextPrimary, fontSize = 15.sp, lineHeight = 21.sp,
                         fontWeight = FontWeight.Medium)
+                    }
+                }
+                if (maxWidth.value / LocalDensity.current.fontScale < 230) {
+                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) { saldo(); caducidad() }
+                } else {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Box(Modifier.weight(1f)) { saldo() }
+                        Box(Modifier.weight(1f)) { caducidad() }
+                    }
                 }
             }
         }
