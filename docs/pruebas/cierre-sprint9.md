@@ -20,7 +20,7 @@ Las fotos de perfil, compras y preferencias son locales por cuenta. La foto del 
 
 ## Acciones que requieren el servicio o al equipo
 
-1. **Publicar las reglas ampliadas** en Firebase `expiryalert-e9b37`, conservando las reglas de otras colecciones si existen. [Pasos concretos](../entrega/LEEME.md#activar-el-guardado-de-fotos-en-firebase). No hay sesión administrativa disponible aquí para hacerlo o demostrarlo.
+1. **Completar la conexión Android al proyecto propio `expiryalert-49b5e`** incorporando el archivo oficial `google-services.json`. Authentication por correo y Firestore ya se configuraron; las reglas se publicaron y se verificaron en consola el 24/11. El archivo del cliente todavía usa el identificador anterior. [Evidencia y pendiente concreto](../firebase-proyecto-propio.md).
 2. Instalar 1.4.0 conservando datos y comprobar en el teléfono el nuevo guardado/cambio/eliminación de la foto. La confirmación del equipo recibida corresponde a la versión anterior.
 3. Conservar el paquete/artefactos y registrar la demostración final. Documentar los casos específicos de recordatorios y las aportaciones individuales que el equipo vaya a presentar.
 

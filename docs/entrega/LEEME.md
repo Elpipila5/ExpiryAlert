@@ -2,6 +2,8 @@
 
 Proyecto de Desarrollo Móvil Integral, IDGS10, Universidad Tecnológica de Montemorelos. Docente: Ing. Mario Alberto Chacón Muñoz. Periodo septiembre–noviembre de 2026; presentación el 24 y 25 de noviembre.
 
+**Transición de Firebase en preparación:** se configuró `expiryalert-49b5e` con Authentication y reglas publicadas, pero falta incorporar su `google-services.json`. La app 1.4.0 aún usa la configuración anterior. [Estado y pasos pendientes](../firebase-proyecto-propio.md). No presentar un APK de este borrador como conectado al proyecto nuevo.
+
 ## Contenido preparado
 
 - `ExpiryAlert.apk`: aplicación ejecutable de depuración.
@@ -18,11 +20,13 @@ En el proyecto de Android Studio, actualizar `main` y ejecutar `Actualizar-Expir
 
 Para instalar el APK de CI sobre otra instalación es necesaria la misma firma. Si Android rechaza una actualización por firma, compilar desde Android Studio con la clave que se utilizó antes. Desinstalar elimina fotos de perfil, compras y preferencias locales; evitarlo para actualizar.
 
-## Activar el guardado de fotos en Firebase
+## Firebase del proyecto propio
 
-Las fotos nuevas se guardan en el campo `fotoProducto` del documento privado del producto. Las reglas anteriores que restringen campos pueden rechazarlo hasta publicar la ampliación.
+Las fotos nuevas se guardan en el campo `fotoProducto` del documento privado del producto. El proyecto nuevo `expiryalert-49b5e` ya tiene Firestore Standard y acceso por correo/contraseña. Las reglas ampliadas se publicaron el 24/11/2026 y se comprobaron tres casos en el simulador. **Falta enlazar el cliente Android mediante el archivo oficial de configuración y validar desde el teléfono.**
 
-1. Abrir [las reglas del proyecto expiryalert-e9b37](https://console.firebase.google.com/project/expiryalert-e9b37/firestore/rules).
+Para una publicación posterior:
+
+1. Abrir [las reglas del proyecto expiryalert-49b5e](https://console.firebase.google.com/project/expiryalert-49b5e/firestore/databases/-default-/security/rules).
 2. Conservar una copia del texto actualmente publicado. Si existen otras colecciones con reglas propias, conservarlas y combinar el bloque de `productos`.
 3. Incorporar [firestore.rules](../../firestore.rules), que ya incluye validación de imagen y compatibilidad de documentos antiguos.
 4. Publicar y comprobar desde el teléfono un producto con foto con la cuenta propietaria. Las pruebas de dos cuentas en emulador están en `seguridad/reglas.test.mjs`.
@@ -31,10 +35,10 @@ Si el proyecto se dedica exclusivamente a esta app y ya se dispone de acceso adm
 
 ```bash
 npx --prefix seguridad firebase login
-npx --prefix seguridad firebase deploy --only firestore:rules --project expiryalert-e9b37 --config firebase.json
+npx --prefix seguridad firebase deploy --only firestore:rules --project expiryalert-49b5e --config firebase.json
 ```
 
-El entorno de desarrollo de esta entrega no dispone de una sesión administrativa de Firebase. La existencia del archivo y las pruebas de emulador no demuestran publicación en producción.
+La publicación indicada se verificó en Firebase Console; las pruebas de emulador por sí solas no demuestran despliegue. El proyecto nuevo empieza sin cuentas ni inventario. No se ha migrado contenido del proyecto anterior.
 
 ## Material de consulta
 
