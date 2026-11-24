@@ -107,6 +107,28 @@ abstract class DisenoAdaptableBase {
         guardarCaptura("boton_320_fuente_grande")
     }
 
+    @Test fun tarjetaConFotoConservaElNombreYLosBotonesConFuenteGrande() {
+        val imagen = Bitmap.createBitmap(100, 160, Bitmap.Config.ARGB_8888).apply { eraseColor(android.graphics.Color.GREEN) }
+        val datos = java.io.ByteArrayOutputStream().also { imagen.compress(Bitmap.CompressFormat.PNG, 100, it); imagen.recycle() }.toByteArray()
+        val foto = FotoProducto.comprimir(datos, "galeria")
+        renderizar(320, 1.4f, true) {
+            TarjetaProducto(mapOf("nombre" to "Leche entera", "marca" to "Lala", "categoria" to "Lácteos",
+                "cantidad" to 750.0, "cantidadInicial" to 1000.0, "unidad" to "ml", "fechaCaducidad" to "25/11/2026",
+                "fotoProducto" to foto.aMapa()), {}, {}, false, {}, {}, {})
+        }
+        textoCompleto("Leche entera")
+        textoCompleto("Consumir")
+        textoCompleto("Ajustar cantidad")
+        textoCompleto("25/11/2026")
+        val fecha = mutableListOf<TextLayoutResult>()
+        compose.onNodeWithText("25/11/2026", useUnmergedTree = true)
+            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(fecha) }
+        assertTrue("La fecha debe verse completa en una línea", fecha.all { it.lineCount == 1 })
+        compose.onNodeWithText("Leche entera").performScrollTo()
+        compose.waitUntil(10000) { compose.onAllNodesWithContentDescription("Foto de Leche entera").fetchSemanticsNodes().isNotEmpty() }
+        guardarCaptura("producto_foto_oscuro_fuente_grande")
+    }
+
     @Test fun resumenNoRecortaNingunaEtiquetaEnPantallaEstrecha() {
         renderizar(320) { ResumenDespensa(4, 4, 0, 0) }
         listOf("Productos", "En orden", "Por vencer", "Vencidos").forEach { textoCompleto(it) }

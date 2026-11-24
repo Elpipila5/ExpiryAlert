@@ -235,8 +235,13 @@ fun TarjetaProducto(
     val color = when (estado) { "Vencido" -> StatusDanger; "Próximo a caducar" -> StatusWarn; "Seguro" -> StatusSafe; else -> TextSecondary }
     val fondo = when (estado) { "Vencido" -> StatusDangerBg; "Próximo a caducar" -> StatusWarnBg; "Seguro" -> StatusSafeBg; else -> SurfaceMuted }
     var menu by remember { mutableStateOf(false) }
+    val foto = remember(producto["fotoProducto"]) { FotoProducto.desdeMapa(producto["fotoProducto"]) }
     PanelInventario {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+            if (foto != null) {
+                ImagenProducto(foto, producto["nombre"]?.toString().orEmpty(), Modifier.size(64.dp))
+                Spacer(Modifier.width(12.dp))
+            }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text(producto["nombre"]?.toString() ?: "Sin nombre", color = TextPrimary,
                     fontSize = 18.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold)
@@ -253,6 +258,7 @@ fun TarjetaProducto(
                 }
             }
         }
+        foto?.takeIf { it.fuente == "openfoodfacts" || it.fuente == "web" }?.let { CreditoFotoProducto(it) }
         Surface(shape = RoundedCornerShape(99.dp), color = fondo) {
             Row(Modifier.padding(horizontal = 11.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(6.dp).clip(CircleShape).background(color)); Spacer(Modifier.width(6.dp))
@@ -260,17 +266,29 @@ fun TarjetaProducto(
             }
         }
         Surface(shape = RoundedCornerShape(16.dp), color = SurfaceMuted) {
-            Row(Modifier.fillMaxWidth().padding(14.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            BoxWithConstraints(Modifier.fillMaxWidth().padding(14.dp)) {
+                val saldo: @Composable () -> Unit = {
+                    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     Text("Te queda", fontSize = 12.sp, color = TextSecondary)
                     Text("${ControlCantidades.texto(cantidad)} $unidad", color = TextPrimary,
                         fontSize = 18.sp, lineHeight = 23.sp, fontWeight = FontWeight.SemiBold)
                     if (inicial != null) Text("De ${ControlCantidades.texto(inicial)} $unidad", fontSize = 11.sp, color = TextSecondary)
+                    }
                 }
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                val caducidad: @Composable () -> Unit = {
+                    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     Text("Caducidad", fontSize = 12.sp, color = TextSecondary)
                     Text(fecha.ifBlank { "Por confirmar" }, color = TextPrimary, fontSize = 15.sp, lineHeight = 21.sp,
                         fontWeight = FontWeight.Medium)
+                    }
+                }
+                if (maxWidth.value / LocalDensity.current.fontScale < 230) {
+                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) { saldo(); caducidad() }
+                } else {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Box(Modifier.weight(1f)) { saldo() }
+                        Box(Modifier.weight(1f)) { caducidad() }
+                    }
                 }
             }
         }

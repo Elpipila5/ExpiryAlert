@@ -11,9 +11,21 @@ service cloud.firestore {
       return autenticado() && data.usuarioId == request.auth.uid;
     }
 
-    // Esquema actual de ExpiryAlert (Sprint 5).
-    // Actualizar esta lista en sprints siguientes cuando se incorporen
-    // consumos, lista de compras o campos nuevos.
+    function fotoValida(foto) {
+      return foto is map
+        && foto.keys().hasAll(['contenido', 'fuente', 'pagina'])
+        && foto.keys().hasOnly(['contenido', 'fuente', 'pagina'])
+        && foto.contenido is string
+        && foto.contenido.size() >= 4
+        && foto.contenido.size() <= 120000
+        && foto.contenido.matches('^/9j/[A-Za-z0-9+/]*={0,2}$')
+        && foto.fuente in ['galeria', 'web', 'openfoodfacts']
+        && foto.pagina is string
+        && foto.pagina.size() <= 2000
+        && (foto.pagina == '' || foto.pagina.matches('^https://[^\\s]+$'));
+    }
+
+    // Esquema 1.4.0. Los productos anteriores sin foto siguen siendo válidos.
     function productoValido(data) {
       return data.keys().hasAll([
           'usuarioId', 'nombre', 'categoria', 'cantidad', 'fechaCaducidad'
@@ -22,7 +34,7 @@ service cloud.firestore {
           'usuarioId', 'nombre', 'categoria', 'cantidad', 'fechaCaducidad',
           'cantidadInicial', 'unidad', 'marca', 'codigoBarras',
           'caducidadPendiente', 'correoUsuario', 'fechaCreacion',
-          'ultimaConfirmacion', 'activo'
+          'ultimaConfirmacion', 'activo', 'fotoProducto'
         ])
         && data.usuarioId is string
         && data.nombre is string
@@ -50,7 +62,8 @@ service cloud.firestore {
         && data.get('correoUsuario', '') is string
         && data.get('fechaCreacion', request.time) is timestamp
         && data.get('ultimaConfirmacion', request.time) is timestamp
-        && data.get('activo', true) is bool;
+        && data.get('activo', true) is bool
+        && (!('fotoProducto' in data) || fotoValida(data.fotoProducto));
     }
 
     match /productos/{productoId} {

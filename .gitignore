@@ -54,6 +54,8 @@ DerivedData/
 __pycache__/
 *.pyc
 *.log
+seguridad/resultado-seguridad.txt
+firebase-debug.log
 *.apk
 *.aab
 *.ipa

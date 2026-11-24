@@ -1,27 +1,26 @@
-# Arquitectura propuesta
+# Arquitectura implementada
 
-**Propuesta pendiente de validar con el código existente.** Los documentos no fijan Flutter, Kotlin, proveedor de nube ni base de datos. Confirmarlos al integrar T01 y registrarlos en [decisiones](decisiones.md).
+ExpiryAlert es Android nativo con Kotlin, Jetpack Compose y Material 3. SDK mínimo 24; compilación/objetivo 37. Gradle utiliza Java 25 y las pruebas locales Robolectric Java 21, según Android CI.
 
-## Separación de responsabilidades
+| Área | Código y responsabilidad |
+| --- | --- |
+| Entrada y navegación | `MainActivity`, pantallas de cuenta/productos y navegación Compose por estado. |
+| Presentación | Componentes de diseño e inventario; pantallas de recetas, compras, revisión, desayuno y perfil. |
+| Dominio | Fechas, cantidades, recetas locales, extracción OCR y coincidencias de fotos. |
+| Datos | Firebase Authentication, Firestore, transacciones de cantidades y preferencias locales por UID. |
+| Captura | ML Kit OCR, Google Code Scanner y consultas explícitas a Open Food Facts. |
+| Foto de producto | Consulta de sugerencias, confirmación en el editor y miniatura persistente en el documento. |
+| Avisos | WorkManager, programadores de alertas/desayuno, workers y canales de notificación. |
+| Calidad | JUnit/Robolectric, pruebas instrumentadas Android 15 y reglas con Node/Java en emulador. |
 
-| Área | Responsabilidad | Módulos sugeridos |
-| --- | --- | --- |
-| Presentación | Pantallas, formularios, navegación y estados de carga/error. | Sesión, inventario, registro manual/OCR, consumo, compras, ajustes y recetas. |
-| Dominio | Reglas independientes de cámara, red y almacenamiento. | Caducidad, validación de cantidades, consumo, correcciones y selección de recomendaciones. |
-| Datos y servicios | Persistencia y comunicación con capacidades externas. | Repositorios, autenticación, nube/local, OCR, notificaciones y recetas/enlaces. |
+## Flujos
 
-Adaptar esta separación a la estructura actual del equipo; no exige renombrar o reescribir todo el proyecto.
+El registro manual/OCR/código termina en un formulario validado antes del guardado. Consumos y ajustes usan transacciones sobre el último saldo del servidor. Las consultas se filtran por UID y los archivados se ocultan conservando su ID.
 
-## Flujos principales
+Las fotos se decodifican y reducen fuera del hilo de interfaz. Las descargas HTTPS tienen tiempo y tamaño limitados; las páginas HTML no se aceptan como imágenes. Una sugerencia reemplaza la foto al confirmarla y se persiste al guardar el producto. Google se abre como búsqueda por nombre y marca; no se extraen automáticamente sus resultados ni se incrusta una clave de búsqueda.
 
-- Manual: completar datos → validar → guardar → consultar inventario.
-- OCR: solicitar cámara → tomar foto → extraer candidatos → confirmar/corregir → validar → guardar.
-- Consumo: elegir producto → introducir cantidad en su unidad → validar saldo → registrar movimiento → actualizar inventario/avisos.
-- Caducidad: evaluar fecha local → programar aviso → preguntar existencia → guardar respuesta y actualizar avisos.
-- Recetas: seleccionar alimentos disponibles → priorizar próximos a caducar → consultar servicio o abrir búsqueda externa → mostrar errores controlados.
+Las recetas son locales; YouTube se utiliza mediante enlaces. El backend de IA de `backend/` es una propuesta anterior opcional y no es necesario para la interfaz final.
 
-## Decisiones técnicas antes de integrar
+## Operación
 
-Documentar plataforma objetivo, versiones del SDK, método de autenticación, almacenamiento local/nube y reglas de sincronización, permisos y dependencia de OCR/notificaciones. Registrar cómo se aíslan inventarios por usuario y cómo se cancelan avisos al editar o retirar un producto.
-
-Las reglas de negocio deben poder verificarse con fecha y datos de prueba controlados. Las operaciones de red deben tener estados de error y recuperación. No presentar persistencia local como sincronización en nube si esta última todavía no está implementada.
+WorkManager programa avisos aproximados sujetos a batería y conectividad. Los de otra cuenta se cancelan al cerrar sesión. Compras, preferencias y fotografía de perfil son locales; documentos y fotos de producto pertenecen a Firestore. La matriz de permisos en emulador no acredita qué reglas están publicadas en el servidor real.

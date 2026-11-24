@@ -42,6 +42,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
+import com.google.firebase.firestore.FieldValue
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -255,7 +256,7 @@ fun ExpiryAlertApp(
   var pantalla by rememberSaveable {
     mutableStateOf(if (FirebaseAuth.getInstance().currentUser != null) "principal" else "inicio")
   }
-  var productoEditar by remember { mutableStateOf(mapaVacio()) }
+  var productoEditar by rememberSaveable { mutableStateOf(mapaVacio()) }
   val contextoApp = LocalContext.current
 
   val accionCerrarSesion: () -> Unit = {
@@ -322,7 +323,10 @@ fun ExpiryAlertApp(
         irRevision = { pantalla = "revision" },
         irDesayuno = { pantalla = "desayuno" },
         editarProducto = { prod ->
-          productoEditar = prod
+          // Conserva la edición al volver de Google/galería o recrear la actividad.
+          // Solo valores serializables del formulario, sin Timestamp en el Bundle.
+          productoEditar = HashMap(prod.filterKeys { it in setOf("id", "nombre", "categoria", "cantidad", "unidad",
+            "marca", "codigoBarras", "fechaCaducidad", "fotoProducto") })
           pantalla = "editarProducto"
         },
         cerrarSesion = accionCerrarSesion
@@ -943,13 +947,17 @@ fun calcularEstadoCaducidad(fechaCaducidad: String): String {
 
 @Composable
 fun PantallaAgregarProducto(regresar: () -> Unit, productoGuardado: () -> Unit) {
-  var nombre by remember { mutableStateOf("") }
-  var categoria by remember { mutableStateOf("Alimentos") }
-  var marca by remember { mutableStateOf("") }
-  var codigoBarras by remember { mutableStateOf("") }
-  var cantidad by remember { mutableStateOf("1") }
-  var unidad by remember { mutableStateOf("pzas") }
-  var fechaCaducidad by remember { mutableStateOf("") }
+  var nombre by rememberSaveable { mutableStateOf("") }
+  var categoria by rememberSaveable { mutableStateOf("Alimentos") }
+  var marca by rememberSaveable { mutableStateOf("") }
+  var codigoBarras by rememberSaveable { mutableStateOf("") }
+  var cantidad by rememberSaveable { mutableStateOf("1") }
+  var unidad by rememberSaveable { mutableStateOf("pzas") }
+  var fechaCaducidad by rememberSaveable { mutableStateOf("") }
+  var fotoJson by rememberSaveable { mutableStateOf("") }
+  var urlFotoSugerida by rememberSaveable { mutableStateOf("") }
+  val foto = remember(fotoJson) { FotoProducto.desdeJson(fotoJson) }
+  var preparandoFoto by remember { mutableStateOf(false) }
   var cargando by remember { mutableStateOf(false) }
 
   val context = LocalContext.current
@@ -1002,6 +1010,7 @@ fun PantallaAgregarProducto(regresar: () -> Unit, productoGuardado: () -> Unit) 
           if (datos != null) {
             if (datos.nombre.isNotBlank()) nombre = datos.nombre
             marca = datos.marca
+            urlFotoSugerida = datos.urlFoto
             categoria = datos.categoria.ifBlank { "Alimentos" }
             if (datos.cantidad.isNotBlank()) {
               cantidad = datos.cantidad
@@ -1032,7 +1041,7 @@ fun PantallaAgregarProducto(regresar: () -> Unit, productoGuardado: () -> Unit) 
       Column(modifier = Modifier.padding(20.dp)) {
         CampoTextoMinimalista(
           value = nombre,
-          onValueChange = { nombre = it },
+          onValueChange = { nombre = it; urlFotoSugerida = "" },
           label = "Nombre del producto",
           placeholder = "Ej. Leche entera"
         )
@@ -1046,7 +1055,7 @@ fun PantallaAgregarProducto(regresar: () -> Unit, productoGuardado: () -> Unit) 
         Spacer(modifier = Modifier.height(14.dp))
         CampoTextoMinimalista(
           value = marca,
-          onValueChange = { marca = it },
+          onValueChange = { marca = it; urlFotoSugerida = "" },
           label = "Marca (opcional)",
           placeholder = "Ej. Alpura"
         )
@@ -1099,6 +1108,10 @@ fun PantallaAgregarProducto(regresar: () -> Unit, productoGuardado: () -> Unit) 
       }
     }
 
+    Spacer(modifier = Modifier.height(18.dp))
+    EditorFotoProducto(nombre, marca, codigoBarras, foto, !cargando,
+      alCambiar = { fotoJson = it?.aJson().orEmpty() }, alOcupar = { preparandoFoto = it },
+      urlSugerida = urlFotoSugerida)
     Spacer(modifier = Modifier.height(22.dp))
 
     Button(
@@ -1117,7 +1130,7 @@ fun PantallaAgregarProducto(regresar: () -> Unit, productoGuardado: () -> Unit) 
             Toast.makeText(context, "Fecha inválida.", Toast.LENGTH_SHORT).show()
           else -> {
             cargando = true
-            val producto = hashMapOf(
+            val producto = hashMapOf<String, Any>(
               "nombre" to nombre.trim(),
               "categoria" to categoria.trim(),
               "marca" to marca.trim(),
@@ -1133,6 +1146,7 @@ fun PantallaAgregarProducto(regresar: () -> Unit, productoGuardado: () -> Unit) 
               "ultimaConfirmacion" to Timestamp.now(),
               "activo" to true
             )
+            foto?.let { producto["fotoProducto"] = it.aMapa() }
             db.collection("productos").add(producto)
               .addOnSuccessListener {
                 if (fechaCaducidad.isNotBlank()) {
@@ -1149,7 +1163,7 @@ fun PantallaAgregarProducto(regresar: () -> Unit, productoGuardado: () -> Unit) 
           }
         }
       },
-      enabled = !cargando,
+      enabled = !cargando && !preparandoFoto,
       modifier = Modifier
         .fillMaxWidth()
         .heightIn(min = 52.dp),
@@ -1180,13 +1194,16 @@ fun PantallaEditarProducto(
   val usuario = FirebaseAuth.getInstance().currentUser
   val idProducto = producto["id"]?.toString().orEmpty()
 
-  var nombre by remember(producto) { mutableStateOf(producto["nombre"]?.toString().orEmpty()) }
-  var categoria by remember(producto) { mutableStateOf(producto["categoria"]?.toString().orEmpty()) }
+  var nombre by rememberSaveable(idProducto) { mutableStateOf(producto["nombre"]?.toString().orEmpty()) }
+  var categoria by rememberSaveable(idProducto) { mutableStateOf(producto["categoria"]?.toString().orEmpty()) }
   var cantidad by remember(producto) { mutableStateOf(producto["cantidad"]?.toString().orEmpty()) }
   var unidad by remember(producto) { mutableStateOf(producto["unidad"]?.toString() ?: "pzas") }
-  var marca by remember(producto) { mutableStateOf(producto["marca"]?.toString().orEmpty()) }
+  var marca by rememberSaveable(idProducto) { mutableStateOf(producto["marca"]?.toString().orEmpty()) }
   var codigoBarras by remember(producto) { mutableStateOf(producto["codigoBarras"]?.toString().orEmpty()) }
-  var fechaCaducidad by remember(producto) { mutableStateOf(producto["fechaCaducidad"]?.toString().orEmpty()) }
+  var fechaCaducidad by rememberSaveable(idProducto) { mutableStateOf(producto["fechaCaducidad"]?.toString().orEmpty()) }
+  var fotoJson by rememberSaveable(idProducto) { mutableStateOf(FotoProducto.desdeMapa(producto["fotoProducto"])?.aJson().orEmpty()) }
+  val foto = remember(fotoJson) { FotoProducto.desdeJson(fotoJson) }
+  var preparandoFoto by remember { mutableStateOf(false) }
   var cargando by remember { mutableStateOf(false) }
 
   val calendario = Calendar.getInstance()
@@ -1277,6 +1294,9 @@ fun PantallaEditarProducto(
       }
     }
 
+    Spacer(modifier = Modifier.height(18.dp))
+    EditorFotoProducto(nombre, marca, codigoBarras, foto, !cargando,
+      alCambiar = { fotoJson = it?.aJson().orEmpty() }, alOcupar = { preparandoFoto = it })
     Spacer(modifier = Modifier.height(22.dp))
 
     Button(
@@ -1292,7 +1312,7 @@ fun PantallaEditarProducto(
             Toast.makeText(context, "Fecha inválida.", Toast.LENGTH_SHORT).show()
           else -> {
             cargando = true
-            val cambios = mapOf(
+            val cambios = mutableMapOf<String, Any>(
               "nombre" to nombre.trim(),
               "categoria" to categoria.trim(),
               "marca" to marca.trim(),
@@ -1302,6 +1322,8 @@ fun PantallaEditarProducto(
               "usuarioId" to usuario.uid,
               "correoUsuario" to (usuario.email ?: "")
             )
+            if (foto != null) cambios["fotoProducto"] = foto.aMapa()
+            else if (producto.containsKey("fotoProducto")) cambios["fotoProducto"] = FieldValue.delete()
             db.collection("productos").document(idProducto).update(cambios)
               .addOnSuccessListener {
                 NotificationHelper.cancelarAlerta(context, usuario.uid, idProducto)
@@ -1319,7 +1341,7 @@ fun PantallaEditarProducto(
           }
         }
       },
-      enabled = !cargando,
+      enabled = !cargando && !preparandoFoto,
       modifier = Modifier
         .fillMaxWidth()
         .heightIn(min = 52.dp),
