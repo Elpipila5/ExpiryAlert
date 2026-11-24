@@ -70,7 +70,13 @@ abstract class EditorFotoProductoBase {
         restauracion.emulateSavedInstanceStateRestore()
         compose.runOnIdle { assertEquals(original, actual) }
         compose.onNodeWithText("Quitar foto del producto").performScrollTo().performClick()
-        compose.runOnIdle { assertNull(actual) }
+        // La pulsación publica el cambio antes de que termine la recomposición.
+        // Esperamos el estado visible nuevo, no un número fijo de milisegundos.
+        compose.waitUntil(10000) {
+            compose.onAllNodesWithText("Elegir foto del dispositivo").fetchSemanticsNodes().isNotEmpty()
+        }
         compose.onNodeWithText("Elegir foto del dispositivo").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithContentDescription("Foto de Leche entera").assertDoesNotExist()
+        compose.runOnIdle { assertNull(actual) }
     }
 }

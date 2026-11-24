@@ -1,8 +1,10 @@
-# Seguridad de Firebase — versión candidata
+# Seguridad de Firebase
 
 ## Estado y alcance
 
-El archivo [`firestore.rules`](../firestore.rules) contiene una **propuesta de reglas de producción**, basada en los campos actualmente guardados por ExpiryAlert. **GitHub no publica las reglas en Firebase de forma automática.** El cambio no asegura los datos hasta que alguien autorizado lo pruebe y lo publique.
+El archivo [`firestore.rules`](../firestore.rules) contiene las reglas basadas en los campos actualmente guardados por ExpiryAlert. El 24/11/2026 se publicaron en el nuevo proyecto `expiryalert-49b5e`, después de comprobar creación propia permitida y creación anónima/ajena denegada en Firebase Console. [Configuración, evidencia y conexión Android pendiente](firebase-proyecto-propio.md).
+
+**GitHub no publica las reglas en Firebase de forma automática.** La publicación en este proyecto no acredita las reglas de `expiryalert-e9b37`, cuyo identificador sigue en el cliente hasta sustituir `google-services.json`.
 
 Las reglas protegen la colección raíz `productos` y aplican:
 - Solo una persona autenticada puede consultar, crear, modificar o eliminar sus productos.
@@ -37,7 +39,7 @@ Antes de publicar, hay que validar **tanto que el propietario pueda usar la app 
 
 **Advertencias:** el simulador no significa que las reglas ya estén publicadas; no contiene automáticamente todos los documentos, permisos y flujos reales. No es recomendable utilizar `allow read, write: if true` como solución a `PERMISSION_DENIED`. Si la app deja de poder guardar tras publicar, revisar las diferencias entre el esquema guardado y el esquema validado antes de implementar otras funcionalidades.
 
-**Estado al 21/11/2026:** las reglas están versionadas en GitHub. No está confirmada su publicación en Firebase ni la validación del servidor con dos cuentas. Las pruebas Android de persistencia local no verifican los permisos de Firestore.
+**Estado histórico al 21/11/2026:** las reglas estaban versionadas en GitHub, con publicación sin confirmar. La actualización del 24/11 anterior acredita la publicación en el proyecto nuevo, tres casos simulados y 14 casos de emulador; la aceptación desde el teléfono sigue pendiente.
 
 ## Casos de seguridad
 
@@ -64,6 +66,6 @@ Se desactiva respaldo automático de la app para que preferencias locales, token
 
 ## Limitaciones
 
-- **No hay forma de verificar desde este repositorio qué reglas están actualmente desplegadas en Firebase.**
+- El repositorio no consulta automáticamente las reglas desplegadas. La publicación observada el 24/11 se documenta en [Firebase propio](firebase-proyecto-propio.md); para confirmar cambios posteriores hay que consultar la consola.
 - El User-Agent de Open Food Facts y la configuración cliente de Firebase no deben tratarse como credenciales de servidor; nunca subir una cuenta de servicio, claves privadas, contraseñas o tokens de CI al repositorio.
 - Si en una versión futura las compras, preferencias o el historial de consumo se sincronizan en Firestore, habrá que definir y comprobar las reglas de esas nuevas colecciones.
