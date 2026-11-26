@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "205737633658",
-    "project_id": "expiryalert-e9b37",
-    "storage_bucket": "expiryalert-e9b37.firebasestorage.app"
+    "project_number": "124630660413",
+    "project_id": "expiryalert-49b5e",
+    "storage_bucket": "expiryalert-49b5e.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:205737633658:android:7533a22745d57df48918c3",
+        "mobilesdk_app_id": "1:124630660413:android:c8f7341e1858d69e540154",
         "android_client_info": {
           "package_name": "com.example.expiryalert"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAhAfzM-jSfIJA2jUDEnsPTblGH0OVFo2E"
+          "current_key": "AIzaSyCua_JRmIT8qAL61R5U-chFw-DnsUP7BOc"
         }
       ],
       "services": {

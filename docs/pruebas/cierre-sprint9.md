@@ -1,6 +1,6 @@
 # Cierre técnico del Sprint 9
 
-Estado al 24/11/2026: versión 1.4.0, código 7. La presentación del plan está prevista para el 24 y 25; el 26 y 27 se reservan a cierre y retroalimentación.
+Estado al 24/11/2026: versión 1.4.1, código 8. La presentación del plan está prevista para el 24 y 25; el 26 y 27 se reservan a cierre y retroalimentación.
 
 ## Trabajo concluido y preparado
 
@@ -20,8 +20,8 @@ Las fotos de perfil, compras y preferencias son locales por cuenta. La foto del 
 
 ## Acciones que requieren el servicio o al equipo
 
-1. **Completar la conexión Android al proyecto propio `expiryalert-49b5e`** incorporando el archivo oficial `google-services.json`. Authentication por correo y Firestore ya se configuraron; las reglas se publicaron y se verificaron en consola el 24/11. El archivo del cliente todavía usa el identificador anterior. [Evidencia y pendiente concreto](../firebase-proyecto-propio.md).
-2. Instalar 1.4.0 conservando datos y comprobar en el teléfono el nuevo guardado/cambio/eliminación de la foto. La confirmación del equipo recibida corresponde a la versión anterior.
+1. **Validar registro y persistencia desde Android 1.4.1** con el Firebase propio `expiryalert-49b5e`. Authentication, Firestore y reglas se configuraron y verificaron en consola el 24/11; el cliente Android ya incorpora el archivo oficial. Registrar una cuenta nueva, guardar un producto y comprobar que sigue disponible al cerrar sesión y volver a entrar. [Evidencia y casos pendientes](../firebase-proyecto-propio.md).
+2. Actualizar a 1.4.1 sin desinstalar y comprobar en el teléfono el guardado/cambio/eliminación de la foto. No se migró el inventario del proyecto Firebase anterior. La confirmación del equipo recibida corresponde a la versión anterior.
 3. Conservar el paquete/artefactos y registrar la demostración final. Documentar los casos específicos de recordatorios y las aportaciones individuales que el equipo vaya a presentar.
 
 El estado del tablero debe reflejar criterios satisfechos y límites pendientes, sin atribuir contribuciones ni aprobaciones de GitHub no comunicadas.

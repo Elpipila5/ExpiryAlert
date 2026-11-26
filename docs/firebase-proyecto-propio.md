@@ -34,11 +34,18 @@ Son identidades ficticias del simulador; no se crearon cuentas ni productos real
 
 La suite automatizada de 14 casos en emulador complementa estas tres simulaciones. Ni el simulador ni la suite sustituyen la prueba de registro y persistencia desde el APK instalado.
 
-## Pendiente antes de conectar y entregar el APK
+## Cliente Android conectado en 1.4.1
 
-1. Incorporar el `google-services.json` generado para esta app en `app/google-services.json`. La descarga se completó en la consola, pero no se pudo recuperar su contenido en el entorno de trabajo. **El archivo de la app aún apunta al proyecto anterior: la transición no está terminada.** No se inventan ni reutilizan las claves de otro proyecto.
-2. Verificar el ID de proyecto y el paquete del archivo, incrementar la versión Android, ejecutar las comprobaciones y compilar con la nueva configuración. Hasta entonces no instalar los artefactos de este borrador como versión conectada al nuevo proyecto.
-3. Actualizar desde Android Studio conservando los datos locales. Registrar una cuenta dentro de la app, porque Authentication del proyecto nuevo comienza vacío. No se ha migrado automáticamente el inventario del proyecto anterior.
-4. Guardar, cambiar y quitar la foto de un producto; cerrar sesión y volver a entrar. Comprobar aislamiento con otra cuenta y registrar el resultado en la matriz de pruebas.
+El solicitante proporcionó el archivo oficial `google-services.json`. Se verificaron proyecto, número, ID de app y paquete frente a los datos de la consola y se copió sin modificaciones a `app/google-services.json`. La versión Android pasa a **1.4.1, código 8**. El plugin de Google Services ya está configurado en Gradle, sin complementos adicionales de Android Studio.
 
-`.firebaserc` selecciona el nuevo proyecto para futuros comandos de Firebase. **No sustituye `google-services.json` ni cambia por sí solo el proyecto usado por Android.**
+`.firebaserc` y Android seleccionan ahora el mismo proyecto. El empaquetado comprueba que los recursos `project_id` y `google_app_id` generados por Gradle coinciden con el archivo cliente y registra ambos en `VERSION_Y_PRUEBAS.json`, sin incluir claves API en esos metadatos. El workflow del commit entregado acredita el resultado de compilación y pruebas.
+
+El archivo cliente contiene identificadores usados por el SDK Android; no es una cuenta de servicio ni una credencial administrativa. Authentication y las reglas publicadas protegen los productos.
+
+## Aceptación pendiente en el teléfono
+
+1. Actualizar `main` o `v21`, sincronizar Gradle y ejecutar Run desde Android Studio con la misma firma anterior. Verificar **1.4.1** al final de Mi perfil.
+2. Registrar una cuenta dentro de la app: Authentication del proyecto nuevo comienza vacío. No se migraron automáticamente cuentas ni inventario del proyecto anterior. Las preferencias locales ligadas al UID anterior no pasan automáticamente a la cuenta nueva.
+3. Guardar, cambiar y quitar la foto de un producto; cerrar sesión y volver a entrar. Comprobar aislamiento con otra cuenta y registrar el resultado en la matriz de pruebas.
+
+Estas pruebas de aceptación no se declaran realizadas por compilar el APK o pasar el emulador.

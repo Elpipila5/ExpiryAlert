@@ -1,4 +1,4 @@
-# Reporte técnico de ExpiryAlert 1.4.0
+# Reporte técnico de ExpiryAlert 1.4.1
 
 Corte: 24 de noviembre de 2026. Equipo según el plan: José Enrique Guajardo Lugo, Martin Abelardo Gutiérrez Alcocer y Carlos Emanuel Calderón Franco. Desarrollo Móvil Integral, IDGS10, Universidad Tecnológica de Montemorelos.
 
@@ -55,7 +55,7 @@ Para reproducir fuera de CI, revisar los requisitos de JDK/SDK y el uso de Java 
 
 El paquete contiene APK, fuente, manual, guion, metadatos, hashes e informes locales. Es una compilación de depuración utilizable para demostración; actualizar una instalación existente exige la misma firma.
 
-Falta publicar/verificar las reglas ampliadas en Firebase con acceso administrativo y comprobar el nuevo guardado en el teléfono. No hay credenciales administrativas disponibles en este entorno. WorkManager con app cerrada/ahorro de batería requiere evidencia específica de dispositivo. Las contribuciones personales se registran por evidencia, sin atribuir identidades ni trabajo no confirmado. La revisión conjunta comunicada de 1.3.0 se conserva en `docs/equipo.md`.
+Las reglas están publicadas en el Firebase propio y Android 1.4.1 incorpora su configuración oficial. Falta registrar la aceptación de cuenta/guardado/fotos desde el teléfono. WorkManager con app cerrada/ahorro de batería requiere evidencia específica de dispositivo. Las contribuciones personales se registran por evidencia, sin atribuir identidades ni trabajo no confirmado. La revisión conjunta comunicada de 1.3.0 se conserva en `docs/equipo.md`.
 
 ## Fuentes
 

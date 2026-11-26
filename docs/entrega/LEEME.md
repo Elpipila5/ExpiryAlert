@@ -1,14 +1,14 @@
-# Entrega de ExpiryAlert 1.4.0
+# Entrega de ExpiryAlert 1.4.1
 
 Proyecto de Desarrollo Móvil Integral, IDGS10, Universidad Tecnológica de Montemorelos. Docente: Ing. Mario Alberto Chacón Muñoz. Periodo septiembre–noviembre de 2026; presentación el 24 y 25 de noviembre.
 
-**Transición de Firebase en preparación:** se configuró `expiryalert-49b5e` con Authentication y reglas publicadas, pero falta incorporar su `google-services.json`. La app 1.4.0 aún usa la configuración anterior. [Estado y pasos pendientes](../firebase-proyecto-propio.md). No presentar un APK de este borrador como conectado al proyecto nuevo.
+**Firebase propio conectado:** 1.4.1 incorpora el archivo oficial de `expiryalert-49b5e`, que ya tiene Authentication y reglas publicadas. **Registrar una cuenta dentro de la app:** no se migraron cuentas ni inventario del proyecto anterior. [Configuración y aceptación pendiente](../firebase-proyecto-propio.md).
 
 ## Contenido preparado
 
 - `ExpiryAlert.apk`: aplicación ejecutable de depuración.
 - `codigo/`: código y configuración versionados; incluye manuales, reglas y pruebas.
-- `VERSION_Y_PRUEBAS.json`: versión, commit de fuente/build, resultado de pruebas locales y SHA-256 del APK.
+- `VERSION_Y_PRUEBAS.json`: versión, proyecto/app Firebase verificados en los recursos de Gradle, commit de fuente/build, resultado de pruebas locales y SHA-256 del APK.
 - `evidencias/`: resultados locales, lint y capturas disponibles en el trabajo de compilación.
 - `SHA256SUMS.txt`: integridad de los archivos del paquete.
 
@@ -16,13 +16,13 @@ El workflow **Android CI** adjunta además `pruebas-android-15` y `pruebas-regla
 
 ## Actualizar sin perder los datos
 
-En el proyecto de Android Studio, actualizar `main` y ejecutar `Actualizar-ExpiryAlert.cmd`, o sincronizar Gradle y pulsar Run. El script comprueba la versión instalada. **Versión esperada: 1.4.0, código 7.**
+En el proyecto de Android Studio, actualizar `main` y ejecutar `Actualizar-ExpiryAlert.cmd`, o sincronizar Gradle y pulsar Run. El script comprueba la versión instalada. **Versión esperada: 1.4.1, código 8.**
 
 Para instalar el APK de CI sobre otra instalación es necesaria la misma firma. Si Android rechaza una actualización por firma, compilar desde Android Studio con la clave que se utilizó antes. Desinstalar elimina fotos de perfil, compras y preferencias locales; evitarlo para actualizar.
 
 ## Firebase del proyecto propio
 
-Las fotos nuevas se guardan en el campo `fotoProducto` del documento privado del producto. El proyecto nuevo `expiryalert-49b5e` ya tiene Firestore Standard y acceso por correo/contraseña. Las reglas ampliadas se publicaron el 24/11/2026 y se comprobaron tres casos en el simulador. **Falta enlazar el cliente Android mediante el archivo oficial de configuración y validar desde el teléfono.**
+Las fotos nuevas se guardan en el campo `fotoProducto` del documento privado del producto. El proyecto nuevo `expiryalert-49b5e` ya tiene Firestore Standard y acceso por correo/contraseña. Las reglas ampliadas se publicaron el 24/11/2026 y se comprobaron tres casos en el simulador. Android 1.4.1 ya incorpora el archivo oficial de configuración; **queda por registrar la prueba de cuenta y persistencia desde el teléfono.**
 
 Para una publicación posterior:
 

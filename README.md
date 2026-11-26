@@ -4,9 +4,11 @@ Aplicación para la detección de productos que ya van a expirar, ya expiraron o
 
 Permite controlar la caducidad y las cantidades de un inventario personal. El proyecto pertenece a **Desarrollo Móvil Integral**, grupo **IDGS10**, Universidad Tecnológica de Montemorelos, septiembre-noviembre de 2026.
 
-**Versión `1.4.0` · rama `main`.** Añade fotografía persistente por producto, sugerencias por nombre/marca o código, búsqueda en Google Imágenes, importación desde galería/enlace y cambio/eliminación. Conserva el diseño verde y menta, modo oscuro, perfil, recetas, consumo, ajustes, bajo stock, compras y desayuno.
+**Versión `1.4.1` · rama `main`.** Android utiliza el proyecto Firebase propio `expiryalert-49b5e`. Añade fotografía persistente por producto, sugerencias por nombre/marca o código, búsqueda en Google Imágenes, importación desde galería/enlace y cambio/eliminación. Conserva el diseño verde y menta, modo oscuro, perfil, recetas, consumo, ajustes, bajo stock, compras y desayuno.
 
-El botón de luna/sol cambia toda la aplicación y recuerda la elección en este dispositivo. En **Mi perfil** puedes agregar, cambiar o quitar una foto y editar tu nombre. La foto de perfil es local por cuenta; la foto del producto se guarda con el documento en Firestore. Antes de usar este último campo, [publicar las reglas ampliadas](docs/entrega/LEEME.md#activar-el-guardado-de-fotos-en-firebase).
+El botón de luna/sol cambia toda la aplicación y recuerda la elección en este dispositivo. En **Mi perfil** puedes agregar, cambiar o quitar una foto y editar tu nombre. La foto de perfil es local por cuenta; la foto del producto se guarda con el documento en Firestore. Authentication y las reglas privadas ya se configuraron y publicaron en el [proyecto propio](docs/firebase-proyecto-propio.md).
+
+**Al actualizar a 1.4.1, registra una cuenta dentro de la app.** El nuevo Firebase comienza sin las cuentas ni el inventario del proyecto anterior. No es necesario instalar un complemento de Firebase para sincronizar y ejecutar este proyecto en Android Studio.
 
 ## Funciones de los sprints 6 a 8
 
@@ -18,7 +20,7 @@ El botón de luna/sol cambia toda la aplicación y recuerda la elección en este
 
 Productos y cantidades se mantienen en Firebase. Compras y preferencias se conservan por cuenta en el dispositivo. El recordatorio de desayuno funciona con WorkManager y puede retrasarse por las restricciones de batería de Android.
 
-La base 1.3.0 aprobó 72 pruebas locales y 19 en Android 15. La versión 1.4.0 amplía pruebas de fotos y añade una suite de reglas con dos cuentas. Consultar el resultado del workflow correspondiente al commit instalado y el [reporte técnico](docs/entrega/reporte-tecnico.md). José Enrique informó que los tres integrantes revisaron la base anterior; el nuevo guardado de fotos y la publicación de reglas reales requieren su comprobación final.
+La base 1.3.0 aprobó 72 pruebas locales y 19 en Android 15. La versión 1.4.0 amplía pruebas de fotos y añade una suite de reglas con dos cuentas. Consultar el resultado del workflow correspondiente al commit instalado y el [reporte técnico](docs/entrega/reporte-tecnico.md). José Enrique informó que los tres integrantes revisaron la base anterior; la conexión al Firebase propio y el guardado de fotos requieren aceptación final en el teléfono.
 
 El paquete **ExpiryAlert-entrega** de Android CI reúne APK, código, manuales, metadatos e informes locales. [Material de entrega y demostración](docs/entrega/LEEME.md).
 
@@ -62,7 +64,7 @@ La [Actividad 1](docs/referencias/README.md#actividad-1) tiene diferencias respe
 - Martin Abelardo Gutiérrez Alcocer.
 - Carlos Emanuel Calderón Franco.
 
-Docente: **Ing. Mario Alberto Chacón Muñoz**. Las responsabilidades de producto, técnica y calidad están pendientes de asignación; los tres integrantes desarrollan y revisan código. Las variantes de nombres en los originales están anotadas en [equipo](docs/equipo.md).
+Docente: **Ing. Mario Alberto Chacón Muñoz**. Según lo comunicado por José Enrique, él y Martin programaron, Carlos elaboró los documentos y los tres revisaron la base 1.3.0. Las variantes de nombres en los originales están anotadas en [equipo](docs/equipo.md).
 
 | Hito | Fecha | Resultado esperado según el plan |
 | --- | --- | --- |
@@ -71,4 +73,4 @@ Docente: **Ing. Mario Alberto Chacón Muñoz**. Las responsabilidades de product
 | Presentación final | 24 y 25 de noviembre de 2026 | Aplicación distribuible, código, pruebas y documentación. |
 | Cierre | 26 y 27 de noviembre de 2026 | Cierre y retroalimentación. |
 
-Consulta los [nueve sprints](docs/sprints.md), la [Definition of Done](docs/equipo.md#definition-of-done) y la [instalación](docs/instalacion.md). Los comandos de ejecución, build y pruebas están documentados en [instalación](docs/instalacion.md). Las [reglas de Firestore](firestore.rules) requieren publicación y pruebas manuales en Firebase.
+Consulta los [nueve sprints](docs/sprints.md), la [Definition of Done](docs/equipo.md#definition-of-done) y la [instalación](docs/instalacion.md). Los comandos de ejecución, build y pruebas están documentados en [instalación](docs/instalacion.md). La publicación de las [reglas de Firestore](firestore.rules) y las pruebas de consola se registran en [Firebase propio](docs/firebase-proyecto-propio.md); queda por registrar la aceptación desde el teléfono.

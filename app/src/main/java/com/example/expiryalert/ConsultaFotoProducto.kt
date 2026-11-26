@@ -95,7 +95,7 @@ object ConsultaFotoProducto {
 
     private fun abrir(url: String): HttpURLConnection = (URL(url).openConnection() as HttpURLConnection).apply {
         connectTimeout = 10000; readTimeout = 12000; instanceFollowRedirects = false
-        setRequestProperty("User-Agent", "ExpiryAlert/1.4.0 (https://github.com/Elpipila5/ExpiryAlert)")
+        setRequestProperty("User-Agent", "ExpiryAlert/${BuildConfig.VERSION_NAME} (https://github.com/Elpipila5/ExpiryAlert)")
         setRequestProperty("Accept", "application/json,image/*")
     }
 

@@ -2,9 +2,9 @@
 
 ## Estado y alcance
 
-El archivo [`firestore.rules`](../firestore.rules) contiene las reglas basadas en los campos actualmente guardados por ExpiryAlert. El 24/11/2026 se publicaron en el nuevo proyecto `expiryalert-49b5e`, después de comprobar creación propia permitida y creación anónima/ajena denegada en Firebase Console. [Configuración, evidencia y conexión Android pendiente](firebase-proyecto-propio.md).
+El archivo [`firestore.rules`](../firestore.rules) contiene las reglas basadas en los campos actualmente guardados por ExpiryAlert. El 24/11/2026 se publicaron en el nuevo proyecto `expiryalert-49b5e`, después de comprobar creación propia permitida y creación anónima/ajena denegada en Firebase Console. Android 1.4.1 usa el archivo oficial del mismo proyecto. [Configuración, evidencia y aceptación pendiente en el teléfono](firebase-proyecto-propio.md).
 
-**GitHub no publica las reglas en Firebase de forma automática.** La publicación en este proyecto no acredita las reglas de `expiryalert-e9b37`, cuyo identificador sigue en el cliente hasta sustituir `google-services.json`.
+**GitHub no publica las reglas en Firebase de forma automática.** La publicación en este proyecto no acredita las reglas de `expiryalert-e9b37`, identificador usado hasta 1.4.0. No se accedió a ese proyecto ni se migraron sus cuentas o datos.
 
 Las reglas protegen la colección raíz `productos` y aplican:
 - Solo una persona autenticada puede consultar, crear, modificar o eliminar sus productos.

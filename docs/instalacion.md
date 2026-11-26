@@ -1,6 +1,6 @@
 # Instalación y ejecución de ExpiryAlert
 
-> Versión candidata 1.3.0. Los pasos corresponden a `main`; la aceptación final en el teléfono se registra por separado de las pruebas automatizadas.
+> Versión 1.4.1, código 8. Los pasos corresponden a `main`; la aceptación final en el teléfono se registra por separado de las pruebas automatizadas.
 
 ## Tecnología real
 
@@ -19,9 +19,9 @@
 2. En GitHub Desktop seleccionar **main → Fetch origin → Pull origin**. En la terminal se puede usar `git switch main` y `git pull --ff-only origin main`. Conservar cualquier cambio local antes de cambiar de rama.
 3. Abrir la **carpeta raíz** del repositorio, donde están `settings.gradle.kts`, `gradlew` y `gradle/libs.versions.toml`.
 4. Sincronizar Gradle. Usar un Android SDK con API 37 instalada según la configuración del proyecto.
-5. Configurar Firebase Authentication con Email/Password y Cloud Firestore en el proyecto Firebase del equipo, respetando las reglas de seguridad. El archivo cliente `app/google-services.json` ya está referenciado; no subir credenciales privadas de administrador.
+5. El proyecto `expiryalert-49b5e` ya tiene Authentication por correo/contraseña, Firestore y reglas publicadas. `app/google-services.json` contiene su configuración cliente oficial. No hace falta instalar un complemento de Firebase en Android Studio ni subir credenciales privadas de administrador.
 6. Ejecutar sobre un móvil o emulador compatible. Para el lector automático de código de barras se necesita Google Play Services; si no está disponible, introducir el código manualmente.
-7. Comprobar que **Mi perfil** muestra la versión **1.3.0**. Probar inventario, recetas, consumo, compras, desayuno, modo oscuro y foto de perfil según la [lista de cierre](pruebas/cierre-sprint9.md).
+7. Registrar una cuenta dentro de la app: el nuevo Firebase empieza sin las cuentas ni el inventario anteriores. Comprobar que **Mi perfil** muestra la versión **1.4.1**. Probar inventario, recetas, consumo, compras, desayuno, modo oscuro y foto de perfil según la [lista de cierre](pruebas/cierre-sprint9.md).
 
 ## Comandos desde la raíz
 
