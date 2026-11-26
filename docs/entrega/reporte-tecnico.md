@@ -1,10 +1,12 @@
-# Reporte técnico de ExpiryAlert 1.4.0
+# Reporte técnico de ExpiryAlert 1.4.1
 
 Corte: 24 de noviembre de 2026. Equipo según el plan: José Enrique Guajardo Lugo, Martin Abelardo Gutiérrez Alcocer y Carlos Emanuel Calderón Franco. Desarrollo Móvil Integral, IDGS10, Universidad Tecnológica de Montemorelos.
 
 ## Resultado y alcance
 
 La aplicación reúne F01–F10: cuenta, registro, OCR, inventario, caducidad, consumo, verificación, bajo stock/compras, desayuno y recetas. La ampliación 1.4.0 cubre la fotografía opcional persistente del producto de F02, con cambio y eliminación. El contenido de la imagen acompaña al documento y no depende de conservar la URI de la galería.
+
+La versión 1.4.1 conecta Android al Firebase propio `expiryalert-49b5e` mediante el archivo oficial proporcionado por el solicitante. Authentication por correo/contraseña, Firestore Standard y reglas privadas se configuraron el 24/11/2026. Tres simulaciones de consola permitieron creación propia y rechazaron creación anónima/ajena. El proyecto nuevo requiere registro dentro de la app y no contiene las cuentas ni el inventario anteriores. [Evidencia y aceptación pendiente](../firebase-proyecto-propio.md).
 
 Las sugerencias automáticas usan Open Food Facts y verifican nombre/marca; un código identifica la presentación del catálogo. La persona confirma la vista previa antes de incorporarla. Google Imágenes se abre con nombre y marca; la foto elegida se importa mediante galería o enlace HTTPS. La API de búsqueda de Google está cerrada a nuevos clientes: no se presenta una búsqueda abierta en el navegador como extracción automática.
 
@@ -51,11 +53,13 @@ python3 scripts/preparar-entrega.py
 
 Para reproducir fuera de CI, revisar los requisitos de JDK/SDK y el uso de Java 21 para Robolectric en la instalación y el workflow. La preparación del paquete falla si faltan APK, pruebas o existen fallos/omisiones locales.
 
+La validación del PR #28 aprobó 86 pruebas locales, 27 Android 15 y 14 de reglas, además de APK, lint y diagnóstico Windows: https://github.com/Elpipila5/ExpiryAlert/actions/runs/45485672418 . Incluye la corrección de una carrera de recomposición al probar la eliminación de foto. Para 1.4.1, consultar el workflow del commit entregado, que vuelve a compilar con el archivo cliente nuevo. El empaquetado valida también `project_id` y `google_app_id` generados por Gradle y registra ambos identificadores en `VERSION_Y_PRUEBAS.json`.
+
 ## Entrega y límites pendientes
 
 El paquete contiene APK, fuente, manual, guion, metadatos, hashes e informes locales. Es una compilación de depuración utilizable para demostración; actualizar una instalación existente exige la misma firma.
 
-Falta publicar/verificar las reglas ampliadas en Firebase con acceso administrativo y comprobar el nuevo guardado en el teléfono. No hay credenciales administrativas disponibles en este entorno. WorkManager con app cerrada/ahorro de batería requiere evidencia específica de dispositivo. Las contribuciones personales se registran por evidencia, sin atribuir identidades ni trabajo no confirmado. La revisión conjunta comunicada de 1.3.0 se conserva en `docs/equipo.md`.
+Las reglas están publicadas en el Firebase propio y Android 1.4.1 incorpora su configuración oficial. Falta registrar la aceptación de cuenta/guardado/fotos desde el teléfono. WorkManager con app cerrada/ahorro de batería requiere evidencia específica de dispositivo. Las contribuciones personales se registran por evidencia, sin atribuir identidades ni trabajo no confirmado. La revisión conjunta comunicada de 1.3.0 se conserva en `docs/equipo.md`.
 
 ## Fuentes
 
