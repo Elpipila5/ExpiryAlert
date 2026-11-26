@@ -35,9 +35,15 @@ def preparar():
         raise SystemExit('La configuración Firebase no identifica un único cliente para esta app.')
     proyecto_firebase = firebase['project_info']['project_id']
     app_firebase = clientes[0]['client_info']['mobilesdk_app_id']
-    recursos_firebase = RAIZ / 'app/build/generated/res/google-services/debug/values/values.xml'
-    if not recursos_firebase.is_file():
-        raise SystemExit('Faltan los recursos Firebase generados. Vuelve a compilar el APK.')
+    # AGP administra la carpeta de salida desde Google Services 4.5.0.
+    # Aceptar tanto processDebugGoogleServices como google-services/debug.
+    generados = RAIZ / 'app/build/generated/res'
+    candidatos = [p for p in generados.rglob('values.xml')
+                  if 'google' in p.relative_to(generados).as_posix().lower()
+                  and 'debug' in p.relative_to(generados).as_posix().lower()]
+    if len(candidatos) != 1:
+        raise SystemExit('No se identificaron de forma única los recursos Firebase de debug. Limpia la compilación y vuelve a generar el APK.')
+    recursos_firebase = candidatos[0]
     valores = {n.get('name'): n.text for n in ET.parse(recursos_firebase).getroot().findall('string')}
     if valores.get('project_id') != proyecto_firebase or valores.get('google_app_id') != app_firebase:
         raise SystemExit('Los recursos Android no corresponden al proyecto Firebase del código. Vuelve a compilar.')
