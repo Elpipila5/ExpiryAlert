@@ -129,11 +129,7 @@ fun DesayunoScreen(onVolver: () -> Unit, onRecetas: () -> Unit, onAjustes: () ->
     var intento by remember { mutableIntStateOf(0) }
     val estado = recordarInventario(uid, intento)
     var seleccion by rememberSaveable(uid) { mutableStateOf("") }
-    val disponibles = estado.productos.filter {
-        val fecha = it["fechaCaducidad"]?.toString().orEmpty()
-        (ControlCantidades.numero(it["cantidad"]) ?: 0.0) > 0 &&
-            (fecha.isBlank() || (FechasCaducidad.diasRestantes(fecha)?.let { dias -> dias >= 0 } == true))
-    }
+    val disponibles = ProductosConsumo.disponibles(estado.productos)
     disponibles.firstOrNull { it["id"] == seleccion }?.let { producto ->
         DialogoCantidad(producto, OperacionCantidad.CONSUMIR, { seleccion = "" }) {
             seleccion = ""

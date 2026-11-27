@@ -22,8 +22,8 @@ android {
         applicationId = "com.example.expiryalert"
         minSdk = 24
         targetSdk = 37
-        versionCode = 8
-        versionName = "1.4.1"
+        versionCode = 9
+        versionName = "1.4.2"
 
         // La clave de OpenAI permanece solo en el backend.
         buildConfigField("String", "RECETAS_API_BASE_URL", "\"$recetasApiUrl\"")

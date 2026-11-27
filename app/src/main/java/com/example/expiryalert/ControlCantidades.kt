@@ -33,6 +33,7 @@ object ControlCantidades {
         val nombre = normalizar(valor)
         require(nombre.isNotBlank()) { "Selecciona una unidad." }
         return when (nombre) {
+            "mg", "miligramo", "miligramos" -> Unidad("masa", BigDecimal("0.001"))
             "g", "gr", "gramo", "gramos" -> Unidad("masa", BigDecimal.ONE)
             "kg", "kilo", "kilos", "kilogramo", "kilogramos" -> Unidad("masa", BigDecimal(1000))
             "ml", "mililitro", "mililitros" -> Unidad("volumen", BigDecimal.ONE)
