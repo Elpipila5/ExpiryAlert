@@ -49,3 +49,7 @@ El archivo cliente contiene identificadores usados por el SDK Android; no es una
 3. Guardar, cambiar y quitar la foto de un producto; cerrar sesión y volver a entrar. Comprobar aislamiento con otra cuenta y registrar el resultado en la matriz de pruebas.
 
 Estas pruebas de aceptación no se declaran realizadas por compilar el APK o pasar el emulador.
+
+## Confirmación posterior y versión 1.4.2
+
+El usuario confirmó que el registro de su cuenta aparece en Authentication y que encontró la vista de datos de Firestore. Se conserva el archivo oficial de configuración y el proyecto `expiryalert-49b5e` en 1.4.2; no hace falta crear otra cuenta para actualizar desde 1.4.1. Los flujos automatizados de alta, foto, edición, eliminación y permisos se ejecutan con un backend demo local y se documentan en [correcciones 1.4.2](pruebas/correcciones-142.md). Esa prueba aislada no certifica operaciones con la cuenta real.

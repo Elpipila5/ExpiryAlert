@@ -96,8 +96,10 @@ class FlujosFirebaseInstrumentedTest {
         compose.onAllNodesWithText(texto).fetchSemanticsNodes().isNotEmpty()
     }
     private fun pulsar(texto: String) = compose.onNodeWithText(texto).performScrollTo().performClick()
-    private fun campo(etiqueta: String, valor: String) {
-        compose.onNodeWithContentDescription(etiqueta).performScrollTo().performTextReplacement(valor)
+    private fun campo(etiqueta: String, valor: String, enDialogo: Boolean = false) {
+        val entrada = compose.onNodeWithContentDescription(etiqueta)
+        if (!enDialogo) entrada.performScrollTo()
+        entrada.performTextReplacement(valor)
         closeSoftKeyboard()
     }
     private fun saldo(id: String) = esperar(db.collection("productos").document(id).get(Source.SERVER)).getDouble("cantidad")!!
@@ -174,19 +176,19 @@ class FlujosFirebaseInstrumentedTest {
         val id = sembrar("Arroz QA", 1000.0, "g")
         esperarTexto("Tus productos (1)")
         pulsar("Consumir")
-        campo("Cantidad que consumiste", "0,25")
-        campo("Unidad", "kg")
+        campo("Cantidad que consumiste", "0,25", enDialogo = true)
+        campo("Unidad", "kg", enDialogo = true)
         compose.onNodeWithText("Guardar").performClick()
         esperarTexto("750 g")
         assertEquals(750.0, saldo(id), 0.0)
         pulsar("Ajustar cantidad")
-        campo("Cantidad que tienes ahora", "180")
+        campo("Cantidad que tienes ahora", "180", enDialogo = true)
         compose.onNodeWithText("Guardar").performClick()
         esperarTexto("180 g")
         assertEquals(180.0, saldo(id), 0.0)
         esperarAviso("inventario_$uid/stock")
         pulsar("Consumir")
-        campo("Cantidad que consumiste", "200")
+        campo("Cantidad que consumiste", "200", enDialogo = true)
         compose.onNodeWithText("Guardar").performClick()
         esperarTexto("El consumo supera la cantidad restante.")
         assertEquals(180.0, saldo(id), 0.0)
@@ -265,6 +267,9 @@ class FlujosFirebaseInstrumentedTest {
         val aviso = contexto.getSystemService(NotificationManager::class.java).activeNotifications.single { it.tag == "caducidad/$uid/$id" }
         aviso.notification.contentIntent.send()
         esperarTexto("¿Todavía tienes este producto?")
+        compose.waitUntil(10_000) {
+            compose.onAllNodes(hasText("Ya no lo tengo") and isEnabled()).fetchSemanticsNodes().isNotEmpty()
+        }
         compose.onNodeWithText("Ya no lo tengo").performClick()
         esperarTexto("Tus productos (0)")
         val documento = propios().documents.single()
@@ -295,5 +300,31 @@ class FlujosFirebaseInstrumentedTest {
         }
         esperar(auth.signInWithEmailAndPassword(correoA, passwordPrueba))
         assertEquals("Privado de A", propios().documents.single().getString("nombre"))
+    }
+
+    @Test fun revisionDelServidorSoloAvisaActivosConSaldoSinConfirmacionDeHoy() {
+        ProgramadorAlertas.desactivar(contexto, uid)
+        compose.waitUntil(10_000) {
+            WorkManager.getInstance(contexto).getWorkInfosForUniqueWork("alertas_caducidad_diarias_$uid")
+                .get(5, TimeUnit.SECONDS).none { !it.state.isFinished }
+        }
+        val vencido = sembrar("Arroz vencido", fecha = "01/01/2020")
+        val confirmado = sembrar("Confirmado hoy", fecha = "01/01/2020")
+        esperar(db.collection("productos").document(confirmado).update("ultimaConfirmacion", Timestamp.now()))
+        sembrar("Archivado", fecha = "01/01/2020", activo = false)
+        val agotado = sembrar("Agotado", fecha = "01/01/2020")
+        esperar(db.collection("productos").document(agotado).update("cantidad", 0.0))
+        val trabajador = TestWorkerBuilder<RevisionCaducidadWorker>(contexto, Executor { it.run() },
+            inputData = Data.Builder().putString(RevisionCaducidadWorker.USUARIO_ID, uid).build()).build()
+        assertEquals(androidx.work.ListenableWorker.Result.success(), trabajador.doWork())
+        esperarAviso("caducidad/$uid/$vencido")
+        val manager = contexto.getSystemService(NotificationManager::class.java)
+        assertEquals(1, manager.activeNotifications.count { it.tag?.startsWith("caducidad/$uid/") == true })
+        assertEquals(androidx.work.ListenableWorker.Result.success(), trabajador.doWork())
+        assertEquals(1, manager.activeNotifications.count { it.tag?.startsWith("caducidad/$uid/") == true })
+        NotificationHelper.cancelarAlertasDeUsuario(contexto, uid)
+        auth.signOut()
+        assertEquals(androidx.work.ListenableWorker.Result.success(), trabajador.doWork())
+        compose.waitUntil(10_000) { manager.activeNotifications.none { it.tag?.startsWith("caducidad/$uid/") == true } }
     }
 }

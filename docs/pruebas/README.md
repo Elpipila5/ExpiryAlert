@@ -5,6 +5,7 @@ La [matriz](matriz.md) prepara escenarios manuales; sus resultados se registran 
 - [Diseño y personalización 1.3.0](diseno-personalizacion.md): compilación, pruebas locales y comprobación del rediseño.
 - [Cantidades, compras, desayuno y recetas](v21-sprints6-9.md): implementación y matriz funcional.
 - [Cierre de la versión candidata](cierre-sprint9.md): estado actual y verificaciones de entrega pendientes.
+- [Correcciones y flujos completos 1.4.2](correcciones-142.md): regresiones y Android con Authentication/Firestore locales.
 - [Resultados automatizados y APK](https://github.com/Elpipila5/ExpiryAlert/actions).
 
 ## Registro de ejecución

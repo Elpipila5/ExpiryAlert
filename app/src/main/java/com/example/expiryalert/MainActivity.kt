@@ -116,7 +116,7 @@ class MainActivity : ComponentActivity() {
 
   override fun onNewIntent(intent: Intent) {
     super.onNewIntent(intent)
-    setIntent(intent)
+    // Se consume aquí; la intención de lanzamiento no cambia al atender avisos.
     leerAviso(intent)
   }
 
@@ -709,7 +709,6 @@ fun PantallaPrincipal(
     productos.count { calcularEstadoCaducidad(it["fechaCaducidad"]?.toString().orEmpty()) == "Vencido" }
   }
 
-
   if (productoEliminar.isNotEmpty()) {
     AlertDialog(
       onDismissRequest = { productoEliminar = mapaVacio() },
@@ -981,28 +980,28 @@ fun PantallaAgregarProducto(guardado: GuardadoProductoViewModel, regresar: () ->
         Spacer(modifier = Modifier.height(10.dp))
         EscanerCodigoProducto { codigo, datos ->
           if (!cargando) {
-          codigoBarras = codigo
-          if (datos != null) {
-            if (datos.nombre.isNotBlank()) nombre = datos.nombre
-            marca = datos.marca
-            urlFotoSugerida = datos.urlFoto
-            categoria = datos.categoria.ifBlank { "Alimentos" }
-            if (datos.cantidad.isNotBlank()) {
-              cantidad = datos.cantidad
-              unidad = datos.unidad.ifBlank { "pzas" }
+            codigoBarras = codigo
+            if (datos != null) {
+              if (datos.nombre.isNotBlank()) nombre = datos.nombre
+              marca = datos.marca
+              urlFotoSugerida = datos.urlFoto
+              categoria = datos.categoria.ifBlank { "Alimentos" }
+              if (datos.cantidad.isNotBlank()) {
+                cantidad = datos.cantidad
+                unidad = datos.unidad.ifBlank { "pzas" }
+              }
             }
-          }
           }
         }
         Spacer(modifier = Modifier.height(8.dp))
         CapturaOCRProducto { fecha, cantidadDetectada, unidadDetectada ->
           if (!cargando) {
-          if (fecha.isNotBlank()) fechaCaducidad = fecha
-          if (cantidadDetectada.isNotBlank()) {
-            cantidad = cantidadDetectada
-            unidad = unidadDetectada.ifBlank { unidad }
-          }
-          Toast.makeText(context, "Datos aplicados. Revisa y guarda.", Toast.LENGTH_LONG).show()
+            if (fecha.isNotBlank()) fechaCaducidad = fecha
+            if (cantidadDetectada.isNotBlank()) {
+              cantidad = cantidadDetectada
+              unidad = unidadDetectada.ifBlank { unidad }
+            }
+            Toast.makeText(context, "Datos aplicados. Revisa y guarda.", Toast.LENGTH_LONG).show()
           }
         }
       }
@@ -1050,7 +1049,7 @@ fun PantallaAgregarProducto(guardado: GuardadoProductoViewModel, regresar: () ->
                 if (limpio.matches(Regex("""\d*(?:\.\d{0,3})?"""))) cantidad = limpio
               },
               readOnly = cargando,
-          label = "Cantidad",
+              label = "Cantidad",
               keyboardType = KeyboardType.Decimal
             )
           }
@@ -1059,7 +1058,7 @@ fun PantallaAgregarProducto(guardado: GuardadoProductoViewModel, regresar: () ->
               value = unidad,
               onValueChange = { unidad = it },
               readOnly = cargando,
-          label = "Unidad",
+              label = "Unidad",
               placeholder = "pzas, g, ml"
             )
           }

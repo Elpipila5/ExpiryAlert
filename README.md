@@ -4,15 +4,15 @@ Aplicación para la detección de productos que ya van a expirar, ya expiraron o
 
 Permite controlar la caducidad y las cantidades de un inventario personal. El proyecto pertenece a **Desarrollo Móvil Integral**, grupo **IDGS10**, Universidad Tecnológica de Montemorelos, septiembre-noviembre de 2026.
 
-**Versión `1.4.1` · rama `main`.** Android utiliza el proyecto Firebase propio `expiryalert-49b5e`. Añade fotografía persistente por producto, sugerencias por nombre/marca o código, búsqueda en Google Imágenes, importación desde galería/enlace y cambio/eliminación. Conserva el diseño verde y menta, modo oscuro, perfil, recetas, consumo, ajustes, bajo stock, compras y desayuno.
+**Versión `1.4.2` · ramas `main` y `v21`.** Android utiliza el proyecto Firebase propio `expiryalert-49b5e`. Añade fotografía persistente por producto, sugerencias por nombre/marca o código, búsqueda en Google Imágenes, importación desde galería/enlace y cambio/eliminación. Conserva el diseño verde y menta, modo oscuro, perfil, recetas, consumo, ajustes, bajo stock, compras y desayuno.
 
 El botón de luna/sol cambia toda la aplicación y recuerda la elección en este dispositivo. En **Mi perfil** puedes agregar, cambiar o quitar una foto y editar tu nombre. La foto de perfil es local por cuenta; la foto del producto se guarda con el documento en Firestore. Authentication y las reglas privadas ya se configuraron y publicaron en el [proyecto propio](docs/firebase-proyecto-propio.md).
 
-**Al actualizar a 1.4.1, registra una cuenta dentro de la app.** El nuevo Firebase comienza sin las cuentas ni el inventario del proyecto anterior. No es necesario instalar un complemento de Firebase para sincronizar y ejecutar este proyecto en Android Studio.
+**Si todavía no tienes cuenta en el Firebase propio, regístrate dentro de la app.** Al actualizar desde 1.4.1 se conserva el mismo proyecto y puedes usar tu cuenta existente. No es necesario instalar un complemento de Firebase para sincronizar y ejecutar este proyecto en Android Studio.
 
 ## Funciones de los sprints 6 a 8
 
-- **Mi despensa:** registrar consumo con conversiones kg/g y L/ml, ajustar cantidades y revisar saldos periódicamente.
+- **Mi despensa:** registrar consumo con conversiones kg/g/mg y L/ml, ajustar cantidades y revisar saldos periódicamente.
 - **Mis compras:** agregar productos manualmente, desde bajo stock o desde los ingredientes faltantes de una receta; editar y marcar compras.
 - **Mi desayuno:** registrar los productos consumidos y configurar un recordatorio aproximado.
 - **Perfil → Inventario y recordatorios:** cambiar porcentaje de bajo stock, intervalo de revisión y hora de desayuno.
@@ -21,6 +21,8 @@ El botón de luna/sol cambia toda la aplicación y recuerda la elección en este
 Productos y cantidades se mantienen en Firebase. Compras y preferencias se conservan por cuenta en el dispositivo. El recordatorio de desayuno funciona con WorkManager y puede retrasarse por las restricciones de batería de Android.
 
 La base 1.3.0 aprobó 72 pruebas locales y 19 en Android 15. La versión 1.4.0 amplía pruebas de fotos y añade una suite de reglas con dos cuentas. Consultar el resultado del workflow correspondiente al commit instalado y el [reporte técnico](docs/entrega/reporte-tecnico.md). José Enrique informó que los tres integrantes revisaron la base anterior; la conexión al Firebase propio y el guardado de fotos requieren aceptación final en el teléfono.
+
+La versión 1.4.2 corrige colisiones entre alertas, fechas inválidas, selección de alimentos para desayuno y guardados al girar el teléfono. Incluye pruebas de los flujos Android con Authentication y Firestore locales. [Correcciones y resultados](docs/pruebas/correcciones-142.md).
 
 El paquete **ExpiryAlert-entrega** de Android CI reúne APK, código, manuales, metadatos e informes locales. [Material de entrega y demostración](docs/entrega/LEEME.md).
 

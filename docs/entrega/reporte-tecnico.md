@@ -1,6 +1,6 @@
-# Reporte técnico de ExpiryAlert 1.4.1
+# Reporte técnico de ExpiryAlert 1.4.2
 
-Corte: 24 de noviembre de 2026. Equipo según el plan: José Enrique Guajardo Lugo, Martin Abelardo Gutiérrez Alcocer y Carlos Emanuel Calderón Franco. Desarrollo Móvil Integral, IDGS10, Universidad Tecnológica de Montemorelos.
+Corte: 26 de noviembre de 2026. Equipo según el plan: José Enrique Guajardo Lugo, Martin Abelardo Gutiérrez Alcocer y Carlos Emanuel Calderón Franco. Desarrollo Móvil Integral, IDGS10, Universidad Tecnológica de Montemorelos.
 
 ## Resultado y alcance
 
@@ -11,6 +11,8 @@ La versión 1.4.1 conecta Android al Firebase propio `expiryalert-49b5e` mediant
 Las sugerencias automáticas usan Open Food Facts y verifican nombre/marca; un código identifica la presentación del catálogo. La persona confirma la vista previa antes de incorporarla. Google Imágenes se abre con nombre y marca; la foto elegida se importa mediante galería o enlace HTTPS. La API de búsqueda de Google está cerrada a nuevos clientes: no se presenta una búsqueda abierta en el navegador como extracción automática.
 
 Se filtran categorías no alimentarias reconocidas y términos como pasta dental, leche corporal o aceite para motor al calcular recetas. El diseño, los controles de tema y las fotos de perfil se conservan.
+
+La versión 1.4.2 conserva ese Firebase y añade correcciones de guardado al recrear la actividad, identidad de notificaciones, validación completa de fechas y conversión de miligramos. Recetas y desayuno comparten el filtro de productos alimentarios disponibles. La despensa identifica datos en caché y permite reintentar consultas; las revisiones de caducidad consultan el servidor. [Detalles, reproducción y resultados de regresión](../pruebas/correcciones-142.md).
 
 ## Evolución conforme a los objetivos del cronograma
 
@@ -59,7 +61,7 @@ La validación del PR #28 aprobó 86 pruebas locales, 27 Android 15 y 14 de regl
 
 El paquete contiene APK, fuente, manual, guion, metadatos, hashes e informes locales. Es una compilación de depuración utilizable para demostración; actualizar una instalación existente exige la misma firma.
 
-Las reglas están publicadas en el Firebase propio y Android 1.4.1 incorpora su configuración oficial. Falta registrar la aceptación de cuenta/guardado/fotos desde el teléfono. WorkManager con app cerrada/ahorro de batería requiere evidencia específica de dispositivo. Las contribuciones personales se registran por evidencia, sin atribuir identidades ni trabajo no confirmado. La revisión conjunta comunicada de 1.3.0 se conserva en `docs/equipo.md`.
+Las reglas están publicadas en el Firebase propio y Android conserva su configuración oficial. El usuario confirmó que su cuenta aparece en Authentication. Las pruebas Android con Firebase local cubren los flujos descritos en el informe de 1.4.2; la aceptación de productos/fotos en el teléfono y servicio reales se registra por separado. WorkManager con app cerrada/ahorro de batería requiere evidencia específica de dispositivo. Las contribuciones personales se registran por evidencia, sin atribuir identidades ni trabajo no confirmado. La revisión conjunta comunicada de 1.3.0 se conserva en `docs/equipo.md`.
 
 ## Fuentes
 
