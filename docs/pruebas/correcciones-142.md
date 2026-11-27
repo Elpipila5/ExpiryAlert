@@ -21,7 +21,11 @@ Las notificaciones de inventario también abren la actividad existente cuando es
 
 El commit `efb0338` añadió regresiones antes de modificar la implementación. La [ejecución inicial](https://github.com/Elpipila5/ExpiryAlert/actions/runs/45925282091) registró **91 pruebas locales con 4 fallos** y **30 Android 15 con 2 fallos**, sin omisiones. Los fallos reproducen miligramos, fechas y colisión de avisos: se esperaba conservar dos notificaciones y quedaba una. Las 14 pruebas de reglas y el diagnóstico Windows aprobaron.
 
-El primer conjunto de correcciones aprobó pruebas locales, compilación, lint, paquete y diagnóstico Windows en [esta ejecución](https://github.com/Elpipila5/ExpiryAlert/actions/runs/45925772292). Su ejecución Android se sustituyó al ampliar los casos. El resultado final se registra al terminar el workflow del commit entregado, sin anticipar aprobación ni conteos.
+La [validación final de 1.4.2](https://github.com/Elpipila5/ExpiryAlert/actions/runs/45927237633) aprobó **101 pruebas locales, 37 en Android 15 y 14 de reglas**, sin fallos, errores ni omisiones. Pasaron los cuatro trabajos: compilación/lint, Android, reglas y diagnóstico Windows. Los siete flujos de Firebase local se ejecutaron completos. Lint registró cero errores.
+
+Código probado: `63d5a68f4c53d235ce8d8796eb5f777a5aa6fd11`, integrado mediante [PR #30](https://github.com/Elpipila5/ExpiryAlert/pull/30). Se verificó que el árbol integrado coincide con el probado y se sincronizó `v21` con `main`.
+
+El [paquete de entrega](https://github.com/Elpipila5/ExpiryAlert/actions/runs/45927237633/artifacts/15167630492) contiene 210 archivos cuya integridad se comprobó, versión 1.4.2/código 9 y recursos Firebase del proyecto real. SHA-256 del APK: `a157a9f6f3f531aa8102e71235af44feb582edd6f352a226a0e1040725c84c34`. Los DEX del APK de aplicación no contienen la configuración del backend demo. Los resultados se registraron después de concluir la ejecución.
 
 ## Flujos Android con Firebase local
 

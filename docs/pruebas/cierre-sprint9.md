@@ -16,6 +16,8 @@ Se conservan diseño adaptativo, modos claro/oscuro y personalización de nombre
 
 ## Correcciones y evidencia
 
+La [ejecución final](https://github.com/Elpipila5/ExpiryAlert/actions/runs/45927237633) aprobó 101 pruebas locales, 37 Android 15 y 14 de reglas, sin fallos ni omisiones, además de lint, APK y diagnóstico Windows. PR #30 integrado; `main` y `v21` sincronizados.
+
 El [informe de 1.4.2](correcciones-142.md) documenta los defectos reproducidos antes de corregir, las soluciones y los flujos completos de Android con Firebase local. El workflow del commit entregado y sus artefactos identifican los resultados reales; no se declara terminado un caso solo por su fecha planeada.
 
 Las reglas del Firebase propio `expiryalert-49b5e` se publicaron el 24/11. El usuario confirmó posteriormente que su cuenta aparece en Authentication y que encontró la vista de datos de Firestore. Este cambio conserva la configuración del servicio y sus reglas.
