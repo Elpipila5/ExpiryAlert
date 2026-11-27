@@ -69,8 +69,8 @@ def preparar():
             os.getenv('GITHUB_REPOSITORY', 'Elpipila5/ExpiryAlert') + '/actions/runs/' + os.getenv('GITHUB_RUN_ID', ''),
         limites=['El APK de CI usa firma de depuración; para actualizar una instalación de Android Studio se recomienda compilar con su misma clave.',
             'El resultado global del workflow acredita también Android, Windows y reglas; no sustituye reglas publicadas en Firebase.',
-            'La revisión del equipo comunicada corresponde a 1.3.0; la conexión al Firebase propio y las fotos deben comprobarse con 1.4.1 en el teléfono.',
-            'El proyecto Firebase nuevo comienza sin las cuentas ni el inventario del proyecto anterior; registrarse de nuevo dentro de la app.'])
+            'Las pruebas Android usan un Firebase local aislado; comprobar productos y fotos con la cuenta real y el teléfono. Los recordatorios bajo ahorro de batería dependen del dispositivo.',
+            'Firebase expiryalert-49b5e conserva las cuentas creadas desde 1.4.1; no se migró el inventario del proyecto anterior.'])
     archivos = {'ExpiryAlert.apk': apk.read_bytes(),
         'VERSION_Y_PRUEBAS.json': (json.dumps(metadata, ensure_ascii=False, indent=2) + '\n').encode()}
     leeme = ('ExpiryAlert ' + version + '\n\n'

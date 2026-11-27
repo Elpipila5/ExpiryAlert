@@ -1,6 +1,6 @@
 # Instalación y ejecución de ExpiryAlert
 
-> Versión 1.4.1, código 8. Los pasos corresponden a `main`; la aceptación final en el teléfono se registra por separado de las pruebas automatizadas.
+> Versión 1.4.2, código 9. Los pasos corresponden a `main`; la aceptación final en el teléfono se registra por separado de las pruebas automatizadas.
 
 ## Tecnología real
 
@@ -21,7 +21,7 @@
 4. Sincronizar Gradle. Usar un Android SDK con API 37 instalada según la configuración del proyecto.
 5. El proyecto `expiryalert-49b5e` ya tiene Authentication por correo/contraseña, Firestore y reglas publicadas. `app/google-services.json` contiene su configuración cliente oficial. No hace falta instalar un complemento de Firebase en Android Studio ni subir credenciales privadas de administrador.
 6. Ejecutar sobre un móvil o emulador compatible. Para el lector automático de código de barras se necesita Google Play Services; si no está disponible, introducir el código manualmente.
-7. Registrar una cuenta dentro de la app: el nuevo Firebase empieza sin las cuentas ni el inventario anteriores. Comprobar que **Mi perfil** muestra la versión **1.4.1**. Probar inventario, recetas, consumo, compras, desayuno, modo oscuro y foto de perfil según la [lista de cierre](pruebas/cierre-sprint9.md).
+7. Usar la cuenta creada en el Firebase propio; registrarse si aún no se tiene una. Se conservan las cuentas y productos de 1.4.1. No se migraron los del proyecto anterior. Comprobar que **Mi perfil** muestra la versión **1.4.2**. Probar inventario, recetas, consumo, compras, desayuno, modo oscuro y foto de perfil según la [lista de cierre](pruebas/cierre-sprint9.md).
 
 ## Comandos desde la raíz
 

@@ -30,6 +30,11 @@ class ControlCantidadesTest {
         assertEquals(1250.0, ControlCantidades.convertir(1.25, "kilos", "g"), 0.0)
     }
 
+    @Test fun unidadesDeOCRPermitenConsumirMiligramos() {
+        assertEquals(1.0, ControlCantidades.convertir(1000.0, "mg", "g"), 0.0)
+        assertEquals(0.5, ControlCantidades.consumir(1.0, 500.0, "miligramos", "g"), 0.0)
+    }
+
     @Test fun reconoceSinonimosDePiezas() {
         assertEquals(2.0, ControlCantidades.consumir(3.0, 1.0, "pieza", "pzas"), 0.0)
     }

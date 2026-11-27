@@ -1,8 +1,8 @@
-# Entrega de ExpiryAlert 1.4.1
+# Entrega de ExpiryAlert 1.4.2
 
 Proyecto de Desarrollo Móvil Integral, IDGS10, Universidad Tecnológica de Montemorelos. Docente: Ing. Mario Alberto Chacón Muñoz. Periodo septiembre–noviembre de 2026; presentación el 24 y 25 de noviembre.
 
-**Firebase propio conectado:** 1.4.1 incorpora el archivo oficial de `expiryalert-49b5e`, que ya tiene Authentication y reglas publicadas. **Registrar una cuenta dentro de la app:** no se migraron cuentas ni inventario del proyecto anterior. [Configuración y aceptación pendiente](../firebase-proyecto-propio.md).
+**Firebase propio conectado:** 1.4.2 conserva el archivo oficial de `expiryalert-49b5e`, que ya tiene Authentication y reglas publicadas. **Usar la cuenta ya creada en la app o registrar una nueva si no se tiene:** no se migraron cuentas ni inventario del proyecto anterior. [Configuración y aceptación pendiente](../firebase-proyecto-propio.md).
 
 ## Contenido preparado
 
@@ -16,13 +16,13 @@ El workflow **Android CI** adjunta además `pruebas-android-15` y `pruebas-regla
 
 ## Actualizar sin perder los datos
 
-En el proyecto de Android Studio, actualizar `main` y ejecutar `Actualizar-ExpiryAlert.cmd`, o sincronizar Gradle y pulsar Run. El script comprueba la versión instalada. **Versión esperada: 1.4.1, código 8.**
+En el proyecto de Android Studio, actualizar `main` y ejecutar `Actualizar-ExpiryAlert.cmd`, o sincronizar Gradle y pulsar Run. El script comprueba la versión instalada. **Versión esperada: 1.4.2, código 9.**
 
 Para instalar el APK de CI sobre otra instalación es necesaria la misma firma. Si Android rechaza una actualización por firma, compilar desde Android Studio con la clave que se utilizó antes. Desinstalar elimina fotos de perfil, compras y preferencias locales; evitarlo para actualizar.
 
 ## Firebase del proyecto propio
 
-Las fotos nuevas se guardan en el campo `fotoProducto` del documento privado del producto. El proyecto nuevo `expiryalert-49b5e` ya tiene Firestore Standard y acceso por correo/contraseña. Las reglas ampliadas se publicaron el 24/11/2026 y se comprobaron tres casos en el simulador. Android 1.4.1 ya incorpora el archivo oficial de configuración; **queda por registrar la prueba de cuenta y persistencia desde el teléfono.**
+Las fotos nuevas se guardan en el campo `fotoProducto` del documento privado del producto. El proyecto nuevo `expiryalert-49b5e` ya tiene Firestore Standard y acceso por correo/contraseña. Las reglas ampliadas se publicaron el 24/11/2026 y se comprobaron tres casos en el simulador. Android 1.4.2 conserva el archivo oficial de configuración. El usuario confirmó que su cuenta aparece en Authentication; queda por registrar la aceptación de productos/fotos con el teléfono y servicio reales. [Correcciones y pruebas 1.4.2](../pruebas/correcciones-142.md).
 
 Para una publicación posterior:
 

@@ -22,13 +22,13 @@ android {
         applicationId = "com.example.expiryalert"
         minSdk = 24
         targetSdk = 37
-        versionCode = 8
-        versionName = "1.4.1"
+        versionCode = 9
+        versionName = "1.4.2"
 
         // La clave de OpenAI permanece solo en el backend.
         buildConfigField("String", "RECETAS_API_BASE_URL", "\"$recetasApiUrl\"")
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "com.example.expiryalert.ExpiryAlertPruebasRunner"
     }
 
     sourceSets {
@@ -84,6 +84,8 @@ dependencies {
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation("androidx.test.espresso:espresso-intents:3.7.0")
+    androidTestImplementation("androidx.work:work-testing:2.10.5")
     androidTestImplementation(libs.androidx.junit)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)

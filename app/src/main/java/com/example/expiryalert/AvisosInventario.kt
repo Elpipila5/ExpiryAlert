@@ -37,6 +37,7 @@ object AvisosInventario {
         "Revisa tus productos y registra cuánto usaste en tu desayuno."
     )
 
+    @Synchronized
     private fun mostrar(context: Context, uid: String, tipo: String, destino: String, titulo: String, mensaje: String) {
         if (FirebaseAuth.getInstance().currentUser?.uid != uid) return
         NotificationHelper.crearCanalNotificaciones(context)
@@ -49,7 +50,7 @@ object AvisosInventario {
             data = Uri.parse("expiryalert://inventario/$uid/$tipo")
             putExtra(EXTRA_DESTINO, destino)
             putExtra(EXTRA_UID, uid)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         }
         val pendiente = PendingIntent.getActivity(context, clave.hashCode(), intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)

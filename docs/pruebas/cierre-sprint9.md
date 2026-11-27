@@ -1,27 +1,30 @@
 # Cierre técnico del Sprint 9
 
-Estado al 24/11/2026: versión 1.4.1, código 8. La presentación del plan está prevista para el 24 y 25; el 26 y 27 se reservan a cierre y retroalimentación.
+Estado al 26/11/2026: versión 1.4.2, código 9. El alcance funcional del cronograma F01–F10 está implementado. Este cierre atiende correcciones, integración y validación técnica; las participaciones se excluyen a petición del solicitante.
 
-## Trabajo concluido y preparado
+## Alcance disponible
 
-- F01–F10 integradas en la base 1.3.0. José Enrique informó que el equipo de tres integrantes revisó la última versión y que los problemas visuales y de actualización quedaron resueltos.
-- F02 ampliada con foto del producto persistida dentro de su documento. Importación desde galería/enlace, sugerencias por código o nombre/marca, búsqueda Google y confirmación de vista previa.
-- Reglas ampliadas para fotos, compatibles con productos antiguos y probadas con dos cuentas/cliente anónimo. Suite de 14 casos en emulador, aprobada el 24/11.
-- Pruebas compartidas de fotografía y editor para API 27 local y Android 15. Incluyen conservación tras borrar el archivo de origen y restauración de estado.
-- Modelo de datos y arquitectura actualizados al código implementado.
-- Manual, reporte técnico y guion de demostración en [entrega](../entrega/LEEME.md).
-- Paquete reproducible con APK, fuente, hashes y resultados locales. Artefactos de CI con conservación de 90 días.
+| Cronograma | Funciones integradas |
+| --- | --- |
+| Sprints 1–5, F01–F05 | Cuenta y sesión; productos por usuario con foto opcional; registro manual, código de barras y OCR con confirmación; inventario clasificado y alertas con confirmación/archivo. |
+| Sprint 6, F06–F07 | Consumos con conversiones kg/g/mg y L/ml, saldo restante, rechazo de cantidades imposibles, confirmación y corrección periódica. |
+| Sprint 7, F08/F10 | Umbral de bajo stock, avisos, lista de compras; 28 recetas completas/parciales e ideas sin inventario, faltantes, preparación y YouTube. |
+| Sprint 8, F09 | Hora de desayuno configurable, recordatorio aproximado, registro de consumo y permisos opcionales. |
+| Sprint 9 | Correcciones 1.4.2, pruebas locales/Android/reglas, diagnóstico de actualización Windows y paquete con APK, fuente, manuales y hashes. |
 
-## Evidencia histórica y nueva
+Se conservan diseño adaptativo, modos claro/oscuro y personalización de nombre/foto de perfil. Compras, preferencias y foto de perfil son locales por cuenta; productos y fotos del producto se guardan en Firestore.
 
-La base 8ddcf02 aprobó [72 pruebas locales y 19 Android](https://github.com/Elpipila5/ExpiryAlert/actions/runs/44942875087), lint y diagnóstico Windows. El workflow de 1.4.0 vuelve a compilar y ampliar las suites; su resultado real y metadatos identifican el APK final. No se declara aprobada una ejecución nueva antes de que termine.
+## Correcciones y evidencia
 
-Las fotos de perfil, compras y preferencias son locales por cuenta. La foto del producto viaja con Firestore. Los recordatorios WorkManager son aproximados; una prueba de emulador no acredita entrega bajo ahorro de batería en el Xiaomi.
+El [informe de 1.4.2](correcciones-142.md) documenta los defectos reproducidos antes de corregir, las soluciones y los flujos completos de Android con Firebase local. El workflow del commit entregado y sus artefactos identifican los resultados reales; no se declara terminado un caso solo por su fecha planeada.
 
-## Acciones que requieren el servicio o al equipo
+Las reglas del Firebase propio `expiryalert-49b5e` se publicaron el 24/11. El usuario confirmó posteriormente que su cuenta aparece en Authentication y que encontró la vista de datos de Firestore. Este cambio conserva la configuración del servicio y sus reglas.
 
-1. **Validar registro y persistencia desde Android 1.4.1** con el Firebase propio `expiryalert-49b5e`. Authentication, Firestore y reglas se configuraron y verificaron en consola el 24/11; el cliente Android ya incorpora el archivo oficial. Registrar una cuenta nueva, guardar un producto y comprobar que sigue disponible al cerrar sesión y volver a entrar. [Evidencia y casos pendientes](../firebase-proyecto-propio.md).
-2. Actualizar a 1.4.1 sin desinstalar y comprobar en el teléfono el guardado/cambio/eliminación de la foto. No se migró el inventario del proyecto Firebase anterior. La confirmación del equipo recibida corresponde a la versión anterior.
-3. Conservar el paquete/artefactos y registrar la demostración final. Documentar los casos específicos de recordatorios y las aportaciones individuales que el equipo vaya a presentar.
+## Comprobaciones finales en el teléfono
 
-El estado del tablero debe reflejar criterios satisfechos y límites pendientes, sin atribuir contribuciones ni aprobaciones de GitHub no comunicadas.
+1. Actualizar sin desinstalar y comprobar **1.4.2** en Mi perfil. Usar la cuenta ya creada en el Firebase propio.
+2. Guardar un producto con foto y comprobar su persistencia tras cerrar y abrir sesión con la cuenta real.
+3. Observar un recordatorio con la app cerrada y las condiciones de ahorro de batería del Xiaomi. Android/WorkManager pueden retrasar el horario.
+4. Descargar los artefactos del workflow aprobado y conservar la demostración final. [Entrega y manuales](../entrega/LEEME.md).
+
+Las pruebas de integración no acceden a la cuenta real ni acreditan las restricciones de batería de ese teléfono. Estos límites de aceptación se informan sin inventar resultados.

@@ -149,7 +149,7 @@ fun DialogoCantidad(
                         if (!guardando) { unidad = it; marca = System.currentTimeMillis(); error = "" }
                     }, "Unidad", readOnly = operacion != OperacionCantidad.CONSUMIR)
                     Text(if (operacion == OperacionCantidad.CONSUMIR)
-                        "Puedes convertir entre kg y g, o entre litros y ml. Solo se descuenta al guardar."
+                        "Puedes convertir entre kg, g y mg, o entre litros y ml. Solo se descuenta al guardar."
                         else "Puedes corregir hasta la cantidad inicial. Registra una reposición como otro producto.",
                         style = MaterialTheme.typography.bodySmall, color = TextSecondary)
                 }

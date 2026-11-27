@@ -30,6 +30,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.lifecycle.ViewModelProvider
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -43,6 +46,7 @@ import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.Source
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -50,9 +54,10 @@ import java.util.Locale
 typealias ProductoMapa = Map<String, Any>
 
 private fun mapaVacio(): ProductoMapa = emptyMap()
-private fun listaProductosVacia(): List<ProductoMapa> = emptyList()
 
 class MainActivity : ComponentActivity() {
+  private val guardadoNuevo by lazy { ViewModelProvider(this)["registro_producto", GuardadoProductoViewModel::class.java] }
+  private val guardadoEdicion by lazy { ViewModelProvider(this)["edicion_producto", GuardadoProductoViewModel::class.java] }
 
   companion object {
     private const val ESTADO_AVISO_UID = "expiry_aviso_uid"
@@ -111,7 +116,7 @@ class MainActivity : ComponentActivity() {
 
   override fun onNewIntent(intent: Intent) {
     super.onNewIntent(intent)
-    setIntent(intent)
+    // Se consume aquí; la intención de lanzamiento no cambia al atender avisos.
     leerAviso(intent)
   }
 
@@ -119,7 +124,7 @@ class MainActivity : ComponentActivity() {
     registerForActivityResult(ActivityResultContracts.RequestPermission()) { concedido ->
       if (concedido) {
         Toast.makeText(this, "Notificaciones activadas", Toast.LENGTH_SHORT).show()
-        NotificationHelper.mostrarNotificacionPrueba(this)
+        FirebaseAuth.getInstance().currentUser?.uid?.let { ProgramadorAlertas.revisarAhora(this, it) }
       } else {
         Toast.makeText(this, "Permiso de notificaciones no concedido", Toast.LENGTH_SHORT).show()
       }
@@ -153,6 +158,8 @@ class MainActivity : ComponentActivity() {
     setContent {
       ExpiryAlertPersonalizado {
         ExpiryAlertApp(
+          guardadoNuevo = guardadoNuevo,
+          guardadoEdicion = guardadoEdicion,
           destinoUid = destinoUid,
           destinoPantalla = destinoPantalla,
           destinoAtendido = { atenderDestino() },
@@ -170,11 +177,7 @@ class MainActivity : ComponentActivity() {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
       if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
         solicitarPermisoNotificaciones.launch(Manifest.permission.POST_NOTIFICATIONS)
-      } else {
-        NotificationHelper.mostrarNotificacionPrueba(this)
       }
-    } else {
-      NotificationHelper.mostrarNotificacionPrueba(this)
     }
   }
 }
@@ -209,7 +212,7 @@ fun CampoTextoMinimalista(
       } else null,
       readOnly = readOnly,
       singleLine = true,
-      modifier = Modifier.fillMaxWidth(),
+      modifier = Modifier.fillMaxWidth().semantics { contentDescription = label },
       shape = RoundedCornerShape(12.dp),
       visualTransformation = if (esPassword) PasswordVisualTransformation() else VisualTransformation.None,
       keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
@@ -244,6 +247,8 @@ fun CabeceraNavegacion(titulo: String, onRegresar: () -> Unit) {
 
 @Composable
 fun ExpiryAlertApp(
+  guardadoNuevo: GuardadoProductoViewModel,
+  guardadoEdicion: GuardadoProductoViewModel,
   destinoUid: String,
   destinoPantalla: String,
   destinoAtendido: () -> Unit,
@@ -260,6 +265,8 @@ fun ExpiryAlertApp(
   val contextoApp = LocalContext.current
 
   val accionCerrarSesion: () -> Unit = {
+    guardadoNuevo.invalidar()
+    guardadoEdicion.invalidar()
     FirebaseAuth.getInstance().currentUser?.uid?.let { uid ->
       cerrarAlertas(uid)
       NotificationHelper.cancelarAlertasDeUsuario(contextoApp, uid)
@@ -349,12 +356,14 @@ fun ExpiryAlertApp(
         onAjustes = { pantalla = "ajustes" }
       )
       "agregarProducto" -> PantallaAgregarProducto(
+        guardado = guardadoNuevo,
         regresar = { pantalla = "principal" },
         productoGuardado = { pantalla = "principal" }
       )
       "editarProducto" -> {
         if (productoEditar.isNotEmpty()) {
           PantallaEditarProducto(
+            guardado = guardadoEdicion,
             producto = productoEditar,
             regresar = {
               productoEditar = mapaVacio()
@@ -659,9 +668,11 @@ fun PantallaPrincipal(
   val db = FirebaseFirestore.getInstance()
   val context = LocalContext.current
 
-  var productos by remember { mutableStateOf(listaProductosVacia()) }
-  var cargando by remember { mutableStateOf(true) }
-  var errorCarga by remember { mutableStateOf("") }
+  var intentoCarga by remember { mutableIntStateOf(0) }
+  val estadoInventario = recordarInventario(usuario?.uid, intentoCarga)
+  val productos = estadoInventario.productos
+  val cargando = estadoInventario.cargando
+  val errorCarga = estadoInventario.error.orEmpty()
   var productoEliminar by remember { mutableStateOf(mapaVacio()) }
   var revisandoCaducidades by remember { mutableStateOf(false) }
   var resultadoRevision by remember { mutableStateOf("") }
@@ -678,8 +689,8 @@ fun PantallaPrincipal(
     }
   }
 
-  LaunchedEffect(productos, usuario?.uid, cargando, errorCarga) {
-    if (usuario != null && !cargando && errorCarga.isBlank()) AvisosInventario.comprobar(context, usuario.uid, productos)
+  LaunchedEffect(productos, usuario?.uid, cargando, errorCarga, estadoInventario.desdeCache) {
+    if (usuario != null && !cargando && errorCarga.isBlank() && !estadoInventario.desdeCache) AvisosInventario.comprobar(context, usuario.uid, productos)
   }
 
   val nombreMostrado = remember(usuario?.displayName, usuario?.email) {
@@ -696,32 +707,6 @@ fun PantallaPrincipal(
   }
   val conteoVencidos = remember(productos) {
     productos.count { calcularEstadoCaducidad(it["fechaCaducidad"]?.toString().orEmpty()) == "Vencido" }
-  }
-
-  DisposableEffect(usuario?.uid) {
-    if (usuario == null) {
-      cargando = false
-      errorCarga = "No hay una sesión iniciada."
-      onDispose { }
-    } else {
-      val listener = db.collection("productos")
-        .whereEqualTo("usuarioId", usuario.uid)
-        .addSnapshotListener { snapshot, error ->
-          if (error != null) {
-            cargando = false
-            errorCarga = error.localizedMessage ?: "Error desconocido"
-            return@addSnapshotListener
-          }
-          if (snapshot != null) {
-            productos = snapshot.documents.mapNotNull { doc ->
-              InventarioProductos.productoVisible(doc.id, doc.data)
-            }
-            cargando = false
-            errorCarga = ""
-          }
-        }
-      onDispose { listener.remove() }
-    }
   }
 
   if (productoEliminar.isNotEmpty()) {
@@ -843,31 +828,9 @@ fun PantallaPrincipal(
 
     Spacer(modifier = Modifier.height(12.dp))
 
+    EstadoCargaInventario(estadoInventario) { intentoCarga++ }
     when {
-      cargando -> {
-        Box(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 48.dp),
-          contentAlignment = Alignment.Center
-        ) {
-          CircularProgressIndicator(color = TextPrimary, strokeWidth = 2.dp, modifier = Modifier.size(28.dp))
-        }
-      }
-      errorCarga.isNotBlank() -> {
-        Surface(
-          modifier = Modifier.fillMaxWidth(),
-          shape = RoundedCornerShape(16.dp),
-          color = SurfaceCard,
-          border = BorderStroke(1.dp, BorderSubtle)
-        ) {
-          Column(modifier = Modifier.padding(22.dp)) {
-            Text(text = "Error al cargar el inventario", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(text = errorCarga, color = TextSecondary, fontSize = 14.sp)
-          }
-        }
-      }
+      cargando || errorCarga.isNotBlank() -> Unit
       productos.isEmpty() -> {
         Surface(
           modifier = Modifier.fillMaxWidth(),
@@ -946,7 +909,7 @@ fun calcularEstadoCaducidad(fechaCaducidad: String): String {
 // ----------------------------------------------------
 
 @Composable
-fun PantallaAgregarProducto(regresar: () -> Unit, productoGuardado: () -> Unit) {
+fun PantallaAgregarProducto(guardado: GuardadoProductoViewModel, regresar: () -> Unit, productoGuardado: () -> Unit) {
   var nombre by rememberSaveable { mutableStateOf("") }
   var categoria by rememberSaveable { mutableStateOf("Alimentos") }
   var marca by rememberSaveable { mutableStateOf("") }
@@ -958,20 +921,30 @@ fun PantallaAgregarProducto(regresar: () -> Unit, productoGuardado: () -> Unit) 
   var urlFotoSugerida by rememberSaveable { mutableStateOf("") }
   val foto = remember(fotoJson) { FotoProducto.desdeJson(fotoJson) }
   var preparandoFoto by remember { mutableStateOf(false) }
-  var cargando by remember { mutableStateOf(false) }
+  val estadoGuardado = guardado.estado
+  val cargando = estadoGuardado.guardando
 
   val context = LocalContext.current
   val auth = FirebaseAuth.getInstance()
   val db = FirebaseFirestore.getInstance()
-  val calendario = Calendar.getInstance()
+  val claveGuardado = "nuevo/${auth.currentUser?.uid.orEmpty()}"
+  val contextoAplicacion = context.applicationContext
+  LaunchedEffect(estadoGuardado, claveGuardado) {
+    if (estadoGuardado.clave == claveGuardado && estadoGuardado.completado) {
+      guardado.consumirResultado(claveGuardado)
+      Toast.makeText(context, "Producto guardado", Toast.LENGTH_SHORT).show()
+      productoGuardado()
+    }
+  }
+  val calendario = Calendar.getInstance(Locale.ROOT)
 
   val selectorFecha = DatePickerDialog(
     context,
     if (LocalApariencia.current?.oscuro == true) android.R.style.Theme_Material_Dialog else android.R.style.Theme_Material_Light_Dialog,
     { _, year, month, day ->
-      val fechaSeleccionada = Calendar.getInstance()
+      val fechaSeleccionada = Calendar.getInstance(Locale.ROOT)
       fechaSeleccionada.set(year, month, day)
-      fechaCaducidad = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(fechaSeleccionada.time)
+      fechaCaducidad = SimpleDateFormat("dd/MM/yyyy", Locale.ROOT).format(fechaSeleccionada.time)
     },
     calendario.get(Calendar.YEAR),
     calendario.get(Calendar.MONTH),
@@ -1006,26 +979,30 @@ fun PantallaAgregarProducto(regresar: () -> Unit, productoGuardado: () -> Unit) 
         )
         Spacer(modifier = Modifier.height(10.dp))
         EscanerCodigoProducto { codigo, datos ->
-          codigoBarras = codigo
-          if (datos != null) {
-            if (datos.nombre.isNotBlank()) nombre = datos.nombre
-            marca = datos.marca
-            urlFotoSugerida = datos.urlFoto
-            categoria = datos.categoria.ifBlank { "Alimentos" }
-            if (datos.cantidad.isNotBlank()) {
-              cantidad = datos.cantidad
-              unidad = datos.unidad.ifBlank { "pzas" }
+          if (!cargando) {
+            codigoBarras = codigo
+            if (datos != null) {
+              if (datos.nombre.isNotBlank()) nombre = datos.nombre
+              marca = datos.marca
+              urlFotoSugerida = datos.urlFoto
+              categoria = datos.categoria.ifBlank { "Alimentos" }
+              if (datos.cantidad.isNotBlank()) {
+                cantidad = datos.cantidad
+                unidad = datos.unidad.ifBlank { "pzas" }
+              }
             }
           }
         }
         Spacer(modifier = Modifier.height(8.dp))
         CapturaOCRProducto { fecha, cantidadDetectada, unidadDetectada ->
-          if (fecha.isNotBlank()) fechaCaducidad = fecha
-          if (cantidadDetectada.isNotBlank()) {
-            cantidad = cantidadDetectada
-            unidad = unidadDetectada.ifBlank { unidad }
+          if (!cargando) {
+            if (fecha.isNotBlank()) fechaCaducidad = fecha
+            if (cantidadDetectada.isNotBlank()) {
+              cantidad = cantidadDetectada
+              unidad = unidadDetectada.ifBlank { unidad }
+            }
+            Toast.makeText(context, "Datos aplicados. Revisa y guarda.", Toast.LENGTH_LONG).show()
           }
-          Toast.makeText(context, "Datos aplicados. Revisa y guarda.", Toast.LENGTH_LONG).show()
         }
       }
     }
@@ -1042,6 +1019,7 @@ fun PantallaAgregarProducto(regresar: () -> Unit, productoGuardado: () -> Unit) 
         CampoTextoMinimalista(
           value = nombre,
           onValueChange = { nombre = it; urlFotoSugerida = "" },
+          readOnly = cargando,
           label = "Nombre del producto",
           placeholder = "Ej. Leche entera"
         )
@@ -1049,6 +1027,7 @@ fun PantallaAgregarProducto(regresar: () -> Unit, productoGuardado: () -> Unit) 
         CampoTextoMinimalista(
           value = categoria,
           onValueChange = { categoria = it },
+          readOnly = cargando,
           label = "Categoría",
           placeholder = "Ej. Lácteos"
         )
@@ -1056,6 +1035,7 @@ fun PantallaAgregarProducto(regresar: () -> Unit, productoGuardado: () -> Unit) 
         CampoTextoMinimalista(
           value = marca,
           onValueChange = { marca = it; urlFotoSugerida = "" },
+          readOnly = cargando,
           label = "Marca (opcional)",
           placeholder = "Ej. Alpura"
         )
@@ -1068,6 +1048,7 @@ fun PantallaAgregarProducto(regresar: () -> Unit, productoGuardado: () -> Unit) 
                 val limpio = nuevoValor.replace(',', '.')
                 if (limpio.matches(Regex("""\d*(?:\.\d{0,3})?"""))) cantidad = limpio
               },
+              readOnly = cargando,
               label = "Cantidad",
               keyboardType = KeyboardType.Decimal
             )
@@ -1076,6 +1057,7 @@ fun PantallaAgregarProducto(regresar: () -> Unit, productoGuardado: () -> Unit) 
             CampoTextoMinimalista(
               value = unidad,
               onValueChange = { unidad = it },
+              readOnly = cargando,
               label = "Unidad",
               placeholder = "pzas, g, ml"
             )
@@ -1093,6 +1075,7 @@ fun PantallaAgregarProducto(regresar: () -> Unit, productoGuardado: () -> Unit) 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
           OutlinedButton(
             onClick = { selectorFecha.show() },
+            enabled = !cargando,
             modifier = Modifier.weight(1f),
             shape = RoundedCornerShape(10.dp),
             border = BorderStroke(1.dp, BorderSubtle)
@@ -1100,7 +1083,7 @@ fun PantallaAgregarProducto(regresar: () -> Unit, productoGuardado: () -> Unit) 
             Text(text = "Elegir fecha", color = TextPrimary, fontSize = 13.sp)
           }
           if (fechaCaducidad.isNotBlank()) {
-            TextButton(onClick = { fechaCaducidad = "" }) {
+            TextButton(onClick = { fechaCaducidad = "" }, enabled = !cargando) {
               Text("Limpiar", color = TextSecondary, fontSize = 13.sp)
             }
           }
@@ -1114,29 +1097,30 @@ fun PantallaAgregarProducto(regresar: () -> Unit, productoGuardado: () -> Unit) 
       urlSugerida = urlFotoSugerida)
     Spacer(modifier = Modifier.height(22.dp))
 
+    if (estadoGuardado.clave == claveGuardado) estadoGuardado.error?.let { Text(it, color = StatusDanger) }
     Button(
       onClick = {
         val usuario = auth.currentUser
+        val cantidadValidada = ControlCantidades.numero(cantidad)
         when {
           usuario == null -> Toast.makeText(context, "No hay una sesión iniciada", Toast.LENGTH_SHORT).show()
           nombre.isBlank() || nombre.trim().length > 150 -> Toast.makeText(context, "Escribe un nombre de hasta 150 caracteres", Toast.LENGTH_SHORT).show()
           marca.trim().length > 150 -> Toast.makeText(context, "La marca admite hasta 150 caracteres", Toast.LENGTH_SHORT).show()
           categoria.isBlank() || categoria.trim().length > 100 -> Toast.makeText(context, "Escribe una categoría de hasta 100 caracteres", Toast.LENGTH_SHORT).show()
           cantidad.isBlank() -> Toast.makeText(context, "Escribe la cantidad", Toast.LENGTH_SHORT).show()
-          ControlCantidades.numero(cantidad)?.let { it > 0.0 } != true ->
+          cantidadValidada == null || cantidadValidada <= 0.0 ->
             Toast.makeText(context, "La cantidad debe ser mayor que 0 y hasta 1000000", Toast.LENGTH_SHORT).show()
           unidad.isBlank() || unidad.trim().length > 30 -> Toast.makeText(context, "Escribe una unidad de hasta 30 caracteres", Toast.LENGTH_SHORT).show()
           fechaCaducidad.isNotBlank() && FechasCaducidad.diasRestantes(fechaCaducidad) == null ->
             Toast.makeText(context, "Fecha inválida.", Toast.LENGTH_SHORT).show()
           else -> {
-            cargando = true
             val producto = hashMapOf<String, Any>(
               "nombre" to nombre.trim(),
               "categoria" to categoria.trim(),
               "marca" to marca.trim(),
               "codigoBarras" to codigoBarras,
-              "cantidad" to cantidad.toDouble(),
-              "cantidadInicial" to cantidad.toDouble(),
+              "cantidad" to cantidadValidada,
+              "cantidadInicial" to cantidadValidada,
               "unidad" to unidad.trim(),
               "fechaCaducidad" to fechaCaducidad,
               "caducidadPendiente" to fechaCaducidad.isBlank(),
@@ -1147,26 +1131,27 @@ fun PantallaAgregarProducto(regresar: () -> Unit, productoGuardado: () -> Unit) 
               "activo" to true
             )
             foto?.let { producto["fotoProducto"] = it.aMapa() }
-            db.collection("productos").add(producto)
-              .addOnSuccessListener {
-                if (fechaCaducidad.isNotBlank()) {
-                  RevisionManualCaducidad.revisar(context, usuario.uid)
+            val revisarFecha = fechaCaducidad.isNotBlank()
+            guardado.guardar(claveGuardado) { terminar ->
+              db.collection("productos").add(producto)
+                .addOnSuccessListener {
+                  if (auth.currentUser?.uid != usuario.uid) {
+                    terminar(IllegalStateException("La sesión cambió. Consulta el inventario de la cuenta correspondiente."))
+                  } else {
+                    if (revisarFecha) RevisionManualCaducidad.revisar(contextoAplicacion, usuario.uid)
+                    terminar(null)
+                  }
                 }
-                cargando = false
-                Toast.makeText(context, "Producto guardado", Toast.LENGTH_SHORT).show()
-                productoGuardado()
-              }
-              .addOnFailureListener { err ->
-                cargando = false
-                Toast.makeText(context, "Error: ${err.localizedMessage}", Toast.LENGTH_LONG).show()
-              }
+                .addOnFailureListener { terminar(it) }
+            }
           }
         }
       },
       enabled = !cargando && !preparandoFoto,
       modifier = Modifier
         .fillMaxWidth()
-        .heightIn(min = 52.dp),
+        .heightIn(min = 52.dp)
+        .semantics { contentDescription = "Guardar producto" },
       colors = ButtonDefaults.buttonColors(containerColor = AccentDark, contentColor = OnAccent),
       shape = RoundedCornerShape(12.dp)
     ) {
@@ -1185,6 +1170,7 @@ fun PantallaAgregarProducto(regresar: () -> Unit, productoGuardado: () -> Unit) 
 
 @Composable
 fun PantallaEditarProducto(
+  guardado: GuardadoProductoViewModel,
   producto: ProductoMapa,
   regresar: () -> Unit,
   productoActualizado: () -> Unit
@@ -1204,11 +1190,21 @@ fun PantallaEditarProducto(
   var fotoJson by rememberSaveable(idProducto) { mutableStateOf(FotoProducto.desdeMapa(producto["fotoProducto"])?.aJson().orEmpty()) }
   val foto = remember(fotoJson) { FotoProducto.desdeJson(fotoJson) }
   var preparandoFoto by remember { mutableStateOf(false) }
-  var cargando by remember { mutableStateOf(false) }
+  val estadoGuardado = guardado.estado
+  val cargando = estadoGuardado.guardando
 
-  val calendario = Calendar.getInstance()
+  val claveGuardado = "editar/${usuario?.uid.orEmpty()}/$idProducto"
+  val contextoAplicacion = context.applicationContext
+  LaunchedEffect(estadoGuardado, claveGuardado) {
+    if (estadoGuardado.clave == claveGuardado && estadoGuardado.completado) {
+      guardado.consumirResultado(claveGuardado)
+      Toast.makeText(context, "Cambios guardados", Toast.LENGTH_SHORT).show()
+      productoActualizado()
+    }
+  }
+  val calendario = Calendar.getInstance(Locale.ROOT)
   try {
-    val formato = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    val formato = SimpleDateFormat("dd/MM/yyyy", Locale.ROOT)
     formato.isLenient = false
     formato.parse(fechaCaducidad)?.let { calendario.time = it }
   } catch (_: Exception) {
@@ -1218,9 +1214,9 @@ fun PantallaEditarProducto(
     context,
     if (LocalApariencia.current?.oscuro == true) android.R.style.Theme_Material_Dialog else android.R.style.Theme_Material_Light_Dialog,
     { _, year, month, day ->
-      val fechaSeleccionada = Calendar.getInstance()
+      val fechaSeleccionada = Calendar.getInstance(Locale.ROOT)
       fechaSeleccionada.set(year, month, day)
-      fechaCaducidad = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(fechaSeleccionada.time)
+      fechaCaducidad = SimpleDateFormat("dd/MM/yyyy", Locale.ROOT).format(fechaSeleccionada.time)
     },
     calendario.get(Calendar.YEAR),
     calendario.get(Calendar.MONTH),
@@ -1249,18 +1245,21 @@ fun PantallaEditarProducto(
         CampoTextoMinimalista(
           value = nombre,
           onValueChange = { nombre = it },
+          readOnly = cargando,
           label = "Nombre del producto"
         )
         Spacer(modifier = Modifier.height(14.dp))
         CampoTextoMinimalista(
           value = categoria,
           onValueChange = { categoria = it },
+          readOnly = cargando,
           label = "Categoría"
         )
         Spacer(modifier = Modifier.height(14.dp))
         CampoTextoMinimalista(
           value = marca,
           onValueChange = { marca = it },
+          readOnly = cargando,
           label = "Marca (opcional)"
         )
         Spacer(modifier = Modifier.height(14.dp))
@@ -1279,6 +1278,7 @@ fun PantallaEditarProducto(
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
           OutlinedButton(
             onClick = { selectorFecha.show() },
+            enabled = !cargando,
             modifier = Modifier.weight(1f),
             shape = RoundedCornerShape(10.dp),
             border = BorderStroke(1.dp, BorderSubtle)
@@ -1286,7 +1286,7 @@ fun PantallaEditarProducto(
             Text(text = "Cambiar fecha", color = TextPrimary, fontSize = 13.sp)
           }
           if (fechaCaducidad.isNotBlank()) {
-            TextButton(onClick = { fechaCaducidad = "" }) {
+            TextButton(onClick = { fechaCaducidad = "" }, enabled = !cargando) {
               Text("Dejar pendiente", color = TextSecondary, fontSize = 13.sp)
             }
           }
@@ -1299,6 +1299,7 @@ fun PantallaEditarProducto(
       alCambiar = { fotoJson = it?.aJson().orEmpty() }, alOcupar = { preparandoFoto = it })
     Spacer(modifier = Modifier.height(22.dp))
 
+    if (estadoGuardado.clave == claveGuardado) estadoGuardado.error?.let { Text(it, color = StatusDanger) }
     Button(
       onClick = {
         when {
@@ -1311,7 +1312,6 @@ fun PantallaEditarProducto(
           fechaCaducidad.isNotBlank() && FechasCaducidad.diasRestantes(fechaCaducidad) == null ->
             Toast.makeText(context, "Fecha inválida.", Toast.LENGTH_SHORT).show()
           else -> {
-            cargando = true
             val cambios = mutableMapOf<String, Any>(
               "nombre" to nombre.trim(),
               "categoria" to categoria.trim(),
@@ -1324,27 +1324,28 @@ fun PantallaEditarProducto(
             )
             if (foto != null) cambios["fotoProducto"] = foto.aMapa()
             else if (producto.containsKey("fotoProducto")) cambios["fotoProducto"] = FieldValue.delete()
-            db.collection("productos").document(idProducto).update(cambios)
-              .addOnSuccessListener {
-                NotificationHelper.cancelarAlerta(context, usuario.uid, idProducto)
-                if (fechaCaducidad.isNotBlank()) {
-                  RevisionManualCaducidad.revisar(context, usuario.uid)
+            val revisarFecha = fechaCaducidad.isNotBlank()
+            guardado.guardar(claveGuardado) { terminar ->
+              db.collection("productos").document(idProducto).update(cambios)
+                .addOnSuccessListener {
+                  if (FirebaseAuth.getInstance().currentUser?.uid != usuario.uid) {
+                    terminar(IllegalStateException("La sesión cambió. Consulta el inventario de la cuenta correspondiente."))
+                  } else {
+                    NotificationHelper.cancelarAlerta(contextoAplicacion, usuario.uid, idProducto)
+                    if (revisarFecha) RevisionManualCaducidad.revisar(contextoAplicacion, usuario.uid)
+                    terminar(null)
+                  }
                 }
-                cargando = false
-                Toast.makeText(context, "Cambios guardados", Toast.LENGTH_SHORT).show()
-                productoActualizado()
-              }
-              .addOnFailureListener { err ->
-                cargando = false
-                Toast.makeText(context, "Error: ${err.localizedMessage}", Toast.LENGTH_LONG).show()
-              }
+                .addOnFailureListener { terminar(it) }
+            }
           }
         }
       },
       enabled = !cargando && !preparandoFoto,
       modifier = Modifier
         .fillMaxWidth()
-        .heightIn(min = 52.dp),
+        .heightIn(min = 52.dp)
+        .semantics { contentDescription = "Guardar cambios del producto" },
       colors = ButtonDefaults.buttonColors(containerColor = AccentDark, contentColor = OnAccent),
       shape = RoundedCornerShape(12.dp)
     ) {
@@ -1376,7 +1377,7 @@ fun DialogoConfirmacionCaducidad(
   var intentoLectura by remember(uid, productoId) { mutableIntStateOf(0) }
 
   LaunchedEffect(uid, productoId, intentoLectura) {
-    db.collection("productos").document(productoId).get()
+    db.collection("productos").document(productoId).get(Source.SERVER)
       .addOnSuccessListener { doc ->
         val datos = doc.data
         if (FirebaseAuth.getInstance().currentUser?.uid != uid ||

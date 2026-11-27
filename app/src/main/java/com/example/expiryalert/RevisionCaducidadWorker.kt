@@ -7,6 +7,7 @@ import androidx.work.WorkerParameters
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Source
 import java.util.concurrent.TimeUnit
 
 /**
@@ -36,7 +37,7 @@ class RevisionCaducidadWorker(
             val productos = Tasks.await(
                 FirebaseFirestore.getInstance().collection("productos")
                     .whereEqualTo("usuarioId", uid)
-                    .get(),
+                    .get(Source.SERVER),
                 25, TimeUnit.SECONDS
             )
 

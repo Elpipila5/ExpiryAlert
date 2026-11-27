@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.net.Uri
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -69,6 +70,7 @@ object NotificationHelper {
         }
     }
 
+    @Synchronized
     fun mostrarAlertaCaducidad(
         context: Context,
         uid: String,
@@ -92,14 +94,15 @@ object NotificationHelper {
         } + " Toca para confirmar si todavía lo tienes."
 
         val intent = Intent(context, MainActivity::class.java).apply {
+            data = Uri.Builder().scheme("expiryalert").authority("caducidad")
+                .appendPath(uid).appendPath(productoId).build()
             putExtra(EXTRA_PRODUCTO_ID, productoId)
             putExtra(EXTRA_USUARIO_ID, uid)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         }
-        val idNotificacion = clave.hashCode()
         val pendingIntent = PendingIntent.getActivity(
             context,
-            idNotificacion,
+            0,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -115,13 +118,12 @@ object NotificationHelper {
             .build()
 
         try {
-            NotificationManagerCompat.from(context).notify(idNotificacion, notificacion)
+            // La identidad incluye ambos ID completos, sin colisiones de hash.
+            AvisosAtendidos.nuevaAlerta(context, uid, productoId)
+            NotificationManagerCompat.from(context).notify("caducidad/$clave", 1, notificacion)
         } catch (_: SecurityException) {
             return EstadoAlerta.BLOQUEADA
         }
-        // Al llegar una alerta nueva, la confirmación de un aviso anterior
-        // ya no debe impedir que se abra el diálogo correspondiente.
-        AvisosAtendidos.nuevaAlerta(context, uid, productoId)
         // Mantener la deduplicación entre comprobaciones manuales y periódicas.
         prefs.edit().putString(clave, hoy).commit()
         return EstadoAlerta.ENVIADA
@@ -129,7 +131,10 @@ object NotificationHelper {
 
     fun cancelarAlerta(context: Context, uid: String, productoId: String) {
         val clave = "$uid/$productoId"
-        NotificationManagerCompat.from(context).cancel(clave.hashCode())
+        NotificationManagerCompat.from(context).apply {
+            cancel("caducidad/$clave", 1)
+            cancel(clave.hashCode()) // Avisos publicados por versiones anteriores.
+        }
         // Una fecha o un nombre editados deben poder generar una alerta actualizada hoy.
         context.getSharedPreferences("avisos_caducidad", Context.MODE_PRIVATE)
             .edit().remove(clave).apply()
@@ -141,7 +146,10 @@ object NotificationHelper {
         val manager = NotificationManagerCompat.from(context)
         preferencias.all.keys
             .filter { it.startsWith("$uid/") }
-            .forEach { clave -> manager.cancel(clave.hashCode()) }
+            .forEach { clave ->
+                manager.cancel("caducidad/$clave", 1)
+                manager.cancel(clave.hashCode())
+            }
         // Se conserva la fecha del último aviso para no repetirlo al iniciar sesión.
     }
 }

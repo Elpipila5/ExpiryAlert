@@ -162,33 +162,10 @@ object RecetasLocales {
     }
 
     private fun aptos(productos: List<Map<String, Any>>, hoy: Calendar): List<Producto> =
-        productos.mapNotNull { dato ->
-            if (dato["activo"] == false) return@mapNotNull null
-            val categoria = normalizar(dato["categoria"]?.toString().orEmpty())
-            val noAlimentarias = setOf("cosmeticos", "cosmetica", "limpieza", "higiene", "medicamentos", "mascotas", "automotriz")
-            if (categoria.split(' ').any { it in noAlimentarias }) return@mapNotNull null
-
-            val cantidad = when (val valor = dato["cantidad"]) {
-                is Number -> valor.toDouble()
-                is String -> valor.replace(',', '.').toDoubleOrNull()
-                else -> null
-            } ?: return@mapNotNull null
-            if (cantidad <= 0 || !cantidad.isFinite()) return@mapNotNull null
-
-            val nombre = dato["nombre"]?.toString()?.trim().orEmpty()
-            if (nombre.isBlank()) return@mapNotNull null
-            val palabrasNombre = normalizar(nombre).split(' ')
-            if (palabrasNombre.any { it in setOf("dental", "corporal", "facial", "motor", "detergente", "shampoo", "champu") }) return@mapNotNull null
-
+        ProductosConsumo.disponibles(productos, hoy).map { dato ->
+            val nombre = dato["nombre"].toString().trim()
             val fecha = dato["fechaCaducidad"]?.toString()?.trim().orEmpty()
-            val dias = if (fecha.isBlank()) {
-                null
-            } else {
-                FechasCaducidad.diasRestantes(fecha, hoy) ?: return@mapNotNull null
-            }
-            if (dias != null && dias < 0) return@mapNotNull null
-
-            Producto(nombre, normalizar(nombre), dias)
+            Producto(nombre, normalizar(nombre), if (fecha.isBlank()) null else FechasCaducidad.diasRestantes(fecha, hoy))
         }
 
     /**
