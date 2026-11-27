@@ -98,7 +98,7 @@ object NotificationHelper {
                 .appendPath(uid).appendPath(productoId).build()
             putExtra(EXTRA_PRODUCTO_ID, productoId)
             putExtra(EXTRA_USUARIO_ID, uid)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         }
         val pendingIntent = PendingIntent.getActivity(
             context,

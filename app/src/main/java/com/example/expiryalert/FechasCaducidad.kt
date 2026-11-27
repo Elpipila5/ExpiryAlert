@@ -42,8 +42,9 @@ object FechasCaducidad {
     }
 
     fun esHoy(fecha: java.util.Date, ahora: Calendar = Calendar.getInstance()): Boolean {
-        val valor = Calendar.getInstance(ahora.timeZone).apply { time = fecha }
-        return valor.get(Calendar.YEAR) == ahora.get(Calendar.YEAR) &&
-            valor.get(Calendar.DAY_OF_YEAR) == ahora.get(Calendar.DAY_OF_YEAR)
+        val valor = Calendar.getInstance(ahora.timeZone, Locale.ROOT).apply { time = fecha }
+        val diaActual = Calendar.getInstance(ahora.timeZone, Locale.ROOT).apply { timeInMillis = ahora.timeInMillis }
+        return valor.get(Calendar.YEAR) == diaActual.get(Calendar.YEAR) &&
+            valor.get(Calendar.DAY_OF_YEAR) == diaActual.get(Calendar.DAY_OF_YEAR)
     }
 }

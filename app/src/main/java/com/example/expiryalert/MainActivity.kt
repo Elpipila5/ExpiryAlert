@@ -1151,7 +1151,8 @@ fun PantallaAgregarProducto(guardado: GuardadoProductoViewModel, regresar: () ->
       enabled = !cargando && !preparandoFoto,
       modifier = Modifier
         .fillMaxWidth()
-        .heightIn(min = 52.dp),
+        .heightIn(min = 52.dp)
+        .semantics { contentDescription = "Guardar producto" },
       colors = ButtonDefaults.buttonColors(containerColor = AccentDark, contentColor = OnAccent),
       shape = RoundedCornerShape(12.dp)
     ) {
@@ -1344,7 +1345,8 @@ fun PantallaEditarProducto(
       enabled = !cargando && !preparandoFoto,
       modifier = Modifier
         .fillMaxWidth()
-        .heightIn(min = 52.dp),
+        .heightIn(min = 52.dp)
+        .semantics { contentDescription = "Guardar cambios del producto" },
       colors = ButtonDefaults.buttonColors(containerColor = AccentDark, contentColor = OnAccent),
       shape = RoundedCornerShape(12.dp)
     ) {

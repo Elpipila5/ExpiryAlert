@@ -4,6 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 import java.util.Calendar
+import java.util.Locale
 
 class FechasCaducidadTest {
     private fun hoy(dia: Int, mes: Int, anio: Int) =
@@ -36,5 +37,17 @@ class FechasCaducidadTest {
 
     @Test fun saltoDeHorarioNoCambiaDias() {
         assertEquals(2L, FechasCaducidad.diasRestantes("01/11/2026", hoy(30, 10, 2026)))
+    }
+
+    @Test fun calendarioDelIdiomaDelTelefonoNoCambiaElAnioDeCaducidad() {
+        val idiomaAnterior = Locale.getDefault()
+        val instante = hoy(28, 10, 2026).time
+        try {
+            Locale.setDefault(Locale.forLanguageTag("th-TH"))
+            val calendarioLocal = Calendar.getInstance().apply { time = instante }
+            assertEquals(0L, FechasCaducidad.diasRestantes("28/10/2026", calendarioLocal))
+            val gregoriano = Calendar.getInstance(Locale.ROOT).apply { time = instante }
+            org.junit.Assert.assertTrue(FechasCaducidad.esHoy(instante, gregoriano))
+        } finally { Locale.setDefault(idiomaAnterior) }
     }
 }
