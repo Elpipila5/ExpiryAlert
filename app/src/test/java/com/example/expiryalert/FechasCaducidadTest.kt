@@ -28,6 +28,12 @@ class FechasCaducidadTest {
         assertNull(FechasCaducidad.diasRestantes("31/02/2026", hoy(28, 10, 2026)))
     }
 
+    @Test fun rechazaFechasConTextoSobranteOFormatoIncompleto() {
+        listOf("28/10/2026 lote 123", "28/10/2026x", "1/1/2027").forEach {
+            assertNull(it, FechasCaducidad.diasRestantes(it, hoy(28, 10, 2026)))
+        }
+    }
+
     @Test fun saltoDeHorarioNoCambiaDias() {
         assertEquals(2L, FechasCaducidad.diasRestantes("01/11/2026", hoy(30, 10, 2026)))
     }
